@@ -3,7 +3,7 @@ A Movie Recommendation System is a very engaging full stack development project 
 
 In working on this project, you will be using HTML, CSS, JavaScript, and front end frameworks such as React.js or Vue.js for increased website interactivity. For the back end, Node.js works wonderfully with Express.js to process user requests and API interactions. The logic to make accurate recommendations can be done using ML models or even through APIs like TMDB (The Movie Database) where movie data can easily be retrieved. User preferences, watch history, and ratings will be saved using a database like MongoDB.
 
-[Fonte: Sharpener](https://www.sharpener.tech/blog/full-stack-development-project-ideas/)
+[Source: Sharpener](https://www.sharpener.tech/blog/full-stack-development-project-ideas/)
 
 #### Skills Needed:
 * Frontend: React.js
