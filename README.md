@@ -1,4 +1,5 @@
 ### Movie Recommendation System
+
 A Movie Recommendation System is a very engaging full stack development project that utilizes conceptually rich techniques to recommend movies as per the user’s likings. It is a well rounded project as it deals with both front end and back end development which makes it good for capturing and learning advanced features.
 
 In working on this project, you will be using HTML, CSS, JavaScript, and front end frameworks such as React.js or Vue.js for increased website interactivity. For the back end, Node.js works wonderfully with Express.js to process user requests and API interactions. The logic to make accurate recommendations can be done using ML models or even through APIs like TMDB (The Movie Database) where movie data can easily be retrieved. User preferences, watch history, and ratings will be saved using a database like PostgreSQL.
@@ -6,34 +7,54 @@ In working on this project, you will be using HTML, CSS, JavaScript, and front e
 [Source: Sharpener](https://www.sharpener.tech/blog/full-stack-development-project-ideas/)
 
 ### Tech Skills:
-* Frontend:
-  * React
-  * TypeScript
-  * Vite
-  * React Router
-  * TanStack Query
-  * Zustand
-  * TailwindCSS
 
-* Backend:
-  * Node.js
-  * Express
-  * TypeScript
-  * Prisma
-  * PostgreSQL
-  * JWT Authentication
+- Frontend:
+  - React
+  - TypeScript
+  - Vite
+  - React Router
+  - TanStack Query
+  - Zustand
+  - TailwindCSS
+    cc
+- Backend:
+  - Node.js
+  - Express
+  - TypeScript
+  - Prisma
+  - PostgreSQL
+  - JWT Authentication
 
-* Infrastructure
-  * Docker
-  * Vercel
-  * AWS
+- Infrastructure
+  - Docker
+  - Vercel
+  - AWS
 
-* External APIs
-  * OMDB API
-  * TMDB API
-
+- External APIs
+  - TMDB API
 
 ### Features:
-* Integration with third-party APIs (e.g., OMDB API)
-* Movie search
-* User rating system
+
+- Integration with third-party APIs (e.g., OMDB API)
+- Movie search
+- User rating system
+
+#
+
+#### Development order:
+
+- [ ] Backend setup
+- [ ] PostgreSQL + Prisma
+- [ ] Authentication
+- [ ] Movie search API integration
+- [ ] Frontend setup
+- [ ] Login / Register UI
+- [ ] Movie listing page
+- [ ] Movie details page
+- [ ] Ratings system
+- [ ] Favorites feature
+- [ ] Watchlist feature
+- [ ] Recommendation engine
+- [ ] Testing
+- [ ] Docker configuration
+- [ ] AWS deployment
