@@ -59,3 +59,4 @@ playwright-report/
 # Misc
 *.swp
 *.swo
+/src/generated/prisma
