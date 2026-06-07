@@ -44,6 +44,7 @@ Thumbs.db
 
 # Docker
 docker-data/
+docker-compose.yml
 
 # Temporary files
 tmp/
