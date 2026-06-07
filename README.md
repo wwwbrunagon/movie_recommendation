@@ -44,19 +44,29 @@ In working on this project, you will be using HTML, CSS, JavaScript, and front e
 ### Backend:
 
 ```
-src
+backend/
 │
-├── controllers
-├── services
-├── repositories
-├── middlewares
-├── validators
-├── routes
-├── types
-├── utils
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
 │
-├── app.ts
-└── server.ts
+├── src/
+│   ├── config/
+│   │   └── prisma.ts
+│   │
+│   ├── controllers/
+│   ├── services/
+│   ├── repositories/
+│   ├── middlewares/
+│   ├── validators/
+│   ├── routes/
+│   ├── types/
+│   └── utils/
+│
+├── .env
+├── package.json
+├── tsconfig.json
+└── docker-compose.yml
 ```
 
 #
