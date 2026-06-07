@@ -41,20 +41,55 @@ In working on this project, you will be using HTML, CSS, JavaScript, and front e
 
 #
 
+### Backend:
+
+```
+src
+│
+├── controllers
+├── services
+├── repositories
+├── middlewares
+├── validators
+├── routes
+├── types
+├── utils
+│
+├── app.ts
+└── server.ts
+```
+
+#
+
+### Frontend:
+
+```
+src/
+├── pages/
+├── components/
+├── hooks/
+├── services/
+├── store/
+├── routes/
+└── types/
+```
+
+#
+
 #### Development order:
 
-- [ ] Backend setup
-- [ ] PostgreSQL + Prisma
-- [ ] Authentication
-- [ ] Movie search API integration
-- [ ] Frontend setup
-- [ ] Login / Register UI
-- [ ] Movie listing page
-- [ ] Movie details page
-- [ ] Ratings system
-- [ ] Favorites feature
-- [ ] Watchlist feature
-- [ ] Recommendation engine
-- [ ] Testing
-- [ ] Docker configuration
-- [ ] AWS deployment
+- Setup Backend Express + TypeScript
+- PostgreSQL + Prisma
+- Autenticação JWT
+- Integração com TMDB
+- Setup Frontend React + Vite
+- Login e Cadastro
+- Busca de Filmes
+- Página de Detalhes
+- Sistema de Avaliações
+- Favoritos
+- Watchlist
+- Sistema de Recomendação
+- Testes
+- Docker
+- Deploy Vercel
