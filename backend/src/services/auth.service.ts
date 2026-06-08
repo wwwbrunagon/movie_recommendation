@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { UserRepository } from '../repositories/user.repository';
 import { generateToken } from '../utils/jwt';
+import { AUTH_ERRORS } from '../constants/auth-errors';
 
 export class AuthService {
   private userRepository = new UserRepository();
@@ -14,19 +15,20 @@ export class AuthService {
       await this.userRepository.findByEmail(email);
 
     if (userExists) {
-      throw new Error('User already exists');
+      throw new Error(
+        AUTH_ERRORS.USER_ALREADY_EXISTS
+      );
     }
 
-    const hashedPassword = await bcrypt.hash(
-      password,
-      10
-    );
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
 
-    const user = await this.userRepository.create(
-      name,
-      email,
-      hashedPassword
-    );
+    const user =
+      await this.userRepository.create(
+        name,
+        email,
+        hashedPassword
+      );
 
     const token = generateToken(user.id);
 
@@ -48,7 +50,9 @@ export class AuthService {
       await this.userRepository.findByEmail(email);
 
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new Error(
+        AUTH_ERRORS.INVALID_CREDENTIALS
+      );
     }
 
     const passwordMatch =
@@ -58,7 +62,9 @@ export class AuthService {
       );
 
     if (!passwordMatch) {
-      throw new Error('Invalid credentials');
+      throw new Error(
+        AUTH_ERRORS.INVALID_CREDENTIALS
+      );
     }
 
     const token = generateToken(user.id);
