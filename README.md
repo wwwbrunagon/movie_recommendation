@@ -68,16 +68,17 @@ backend/
 ├── tsconfig.json
 └── docker-compose.yml
 ```
+
 ### Running the Project Locally
 
 #### Prerequisites
 
 Make sure the following tools are installed:
 
-* Node.js
-* Docker
-* PostgreSQL (via Docker)
-* Prisma CLI
+- Node.js
+- Docker
+- PostgreSQL (via Docker)
+- Prisma CLI
 
 Verify installations:
 
@@ -212,8 +213,8 @@ Expected response:
 
 ```json
 {
-  "id": "...",
-  "email": "bruna@email.com"
+	"id": "...",
+	"email": "bruna@email.com"
 }
 ```
 
@@ -244,7 +245,7 @@ Expected response:
 
 ```json
 {
-  "token": "eyJ..."
+	"token": "eyJ..."
 }
 ```
 
@@ -265,8 +266,8 @@ Expected response:
 
 ```json
 {
-  "id": "...",
-  "email": "bruna@email.com"
+	"id": "...",
+	"email": "bruna@email.com"
 }
 ```
 
@@ -284,7 +285,7 @@ Expected response:
 
 ```json
 {
-  "message": "Unauthorized"
+	"message": "Unauthorized"
 }
 ```
 
@@ -322,22 +323,27 @@ curl -X POST http://localhost:3000/auth/login ...
 
 If all commands execute successfully, the local environment is ready for development and testing.
 
-
+#
 
 #
-# 
 
 ### Frontend:
 
 ```
-src/
-├── pages/
-├── components/
-├── hooks/
-├── services/
-├── store/
-├── routes/
-└── types/
+frontend/
+└── src/
+    ├── components/
+    ├── pages/
+    │   ├── Login/
+    │   ├── Register/
+    │   └── Home/
+    ├── routes/
+    ├── services/
+    ├── store/
+    ├── hooks/
+    ├── types/
+    ├── layouts/
+    └── App.tsx
 ```
 
 #
@@ -346,15 +352,15 @@ src/
 
 - ✅ Setup Backend Express + TypeScript
 - ✅ PostgreSQL + Prisma
-    - Model User
-    - Register
-    - Login
-    - Bcrypt
-    - JWT
-    - Middleware de autenticação
-    - /users/me
-    - Error constants
-    - Zod Validators
+  - Model User
+  - Register
+  - Login
+  - Bcrypt
+  - JWT
+  - Middleware de autenticação
+  - /users/me
+  - Error constants
+  - Zod Validators
 - ✅ Autenticação JWT
 - ✅ Integração com TMDB
 - Setup Frontend React + Vite
