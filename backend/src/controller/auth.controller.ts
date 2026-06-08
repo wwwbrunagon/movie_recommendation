@@ -1,55 +1,44 @@
-import { Request, Response } from "express";
-import { AuthService } from "../services/auth.service";
+import { Request, Response } from 'express';
+import { AuthService } from '../services/auth.service';
 
 const authService = new AuthService();
 
 export class AuthController {
-  async register(
-    req: Request,
-    res: Response
-  ) {
-    try {
-      const { name, email, password } = req.body;
+	async register(req: Request, res: Response): Promise<Response> {
+		try {
+			const { name, email, password } = req.body;
 
-      const result =
-        await authService.register(
-          name,
-          email,
-          password
-        );
+			const result = await authService.register(name, email, password);
 
-      return res.status(201).json(result);
-    } catch (error) {
-      return res.status(400).json({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Registration failed",
-      });
-    }
-  }
+			return res.status(201).json(result);
+		} catch (error) {
+			if (error instanceof Error && error.message === 'EMAIL_ALREADY_EXISTS') {
+				return res.status(409).json({
+					message: 'Email already exists',
+				});
+			}
 
-  async login(
-    req: Request,
-    res: Response
-  ) {
-    try {
-      const { email, password } = req.body;
+			console.error('Register error:', error);
 
-      const result =
-        await authService.login(
-          email,
-          password
-        );
+			return res.status(500).json({
+				message: 'Internal server error',
+			});
+		}
+	}
 
-      return res.json(result);
-    } catch (error) {
-      return res.status(401).json({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Login failed",
-      });
-    }
-  }
+	async login(req: Request, res: Response): Promise<Response> {
+		try {
+			const { email, password } = req.body;
+
+			const result = await authService.login(email, password);
+
+			return res.status(200).json(result);
+		} catch (error) {
+			console.error('Login error:', error);
+
+			return res.status(401).json({
+				message: 'Invalid credentials',
+			});
+		}
+	}
 }
