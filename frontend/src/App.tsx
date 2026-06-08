@@ -1,11 +1,11 @@
-function App() {
-  return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center">
-      <h1 className="text-5xl font-bold">
-        Movie Recommendation System
-      </h1>
-    </div>
-  );
-}
+import { AppRouter } from './routes/AppRouter';
 
-export default App;
+import { QueryProvider } from './providers/QueryProvider';
+
+export function App() {
+	return (
+		<QueryProvider>
+			<AppRouter />
+		</QueryProvider>
+	);
+}
