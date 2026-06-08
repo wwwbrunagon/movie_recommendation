@@ -344,9 +344,16 @@ src/
 
 #### Development order:
 
-- Setup Backend Express + TypeScript
-- PostgreSQL + Prisma
-- Autenticação JWT
+- ✅ Setup Backend Express + TypeScript
+- ✅ PostgreSQL + Prisma
+    - Model User
+    - Register
+    - Login
+    - Bcrypt
+    - JWT
+    - Middleware de autenticação
+    - /users/me
+- ✅ Autenticação JWT
 - Integração com TMDB
 - Setup Frontend React + Vite
 - Login e Cadastro
