@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { AUTH_ERRORS } from '../constants/auth-errors';
+import { AUTH_MESSAGES } from '../constants/auth-messages';
 
 const authService = new AuthService();
 
@@ -11,7 +12,7 @@ export class AuthController {
 
 			if (!name || !email || !password) {
 				return res.status(400).json({
-					message: 'Name, email and password are required',
+					message: AUTH_MESSAGES.INVALID_REQUEST_DATA,
 				});
 			}
 
@@ -24,14 +25,14 @@ export class AuthController {
 				error.message === AUTH_ERRORS.USER_ALREADY_EXISTS
 			) {
 				return res.status(409).json({
-					message: 'Email already exists',
+					message: AUTH_MESSAGES.USER_ALREADY_EXISTS,
 				});
 			}
 
 			console.error(error);
 
 			return res.status(500).json({
-				message: 'Internal server error',
+				message: AUTH_MESSAGES.REGISTER_UNAVAILABLE,
 			});
 		}
 	}
@@ -42,7 +43,7 @@ export class AuthController {
 
 			if (!email || !password) {
 				return res.status(400).json({
-					message: 'Email and password are required',
+					message: AUTH_MESSAGES.INVALID_REQUEST_DATA,
 				});
 			}
 
@@ -55,14 +56,14 @@ export class AuthController {
 				error.message === AUTH_ERRORS.INVALID_CREDENTIALS
 			) {
 				return res.status(401).json({
-					message: 'Invalid credentials',
+					message: AUTH_MESSAGES.INVALID_CREDENTIALS,
 				});
 			}
 
 			console.error(error);
 
 			return res.status(500).json({
-				message: 'Internal server error',
+				message: AUTH_MESSAGES.LOGIN_UNAVAILABLE,
 			});
 		}
 	}

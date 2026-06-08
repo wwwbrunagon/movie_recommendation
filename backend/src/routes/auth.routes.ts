@@ -13,13 +13,13 @@ const authController = new AuthController();
 
 authRoutes.post(
   '/register',
-  validate(registerSchema),
+  validate(registerSchema, 'body'),
   authController.register,
 );
 
 authRoutes.post(
   '/login',
-  validate(loginSchema),
+  validate(loginSchema, 'body'),
   authController.login,
 );
 
