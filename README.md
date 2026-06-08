@@ -353,8 +353,10 @@ src/
     - JWT
     - Middleware de autenticação
     - /users/me
+    - Error constants
+    - Zod Validators
 - ✅ Autenticação JWT
-- Integração com TMDB
+- ✅ Integração com TMDB
 - Setup Frontend React + Vite
 - Login e Cadastro
 - Busca de Filmes
