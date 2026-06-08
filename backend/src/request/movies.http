@@ -1,0 +1,12 @@
+### Search Movies
+GET http://localhost:3000/movies/search?query=batman
+
+###
+
+### Movie Details
+GET http://localhost:3000/movies/550
+
+###
+
+### Movie Credits
+GET http://localhost:3000/movies/550/credits
