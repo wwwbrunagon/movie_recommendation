@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-
+import { persist } from 'zustand/middleware';
 import type { User } from '../types/user.types';
 
 interface AuthStore {
@@ -11,26 +11,27 @@ interface AuthStore {
 	logout: () => void;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-	token: localStorage.getItem('token'),
-
-	user: null,
-
-	login: (token, user) => {
-		localStorage.setItem('token', token);
-
-		set({
-			token,
-			user,
-		});
-	},
-
-	logout: () => {
-		localStorage.removeItem('token');
-
-		set({
+export const useAuthStore = create<AuthStore>()(
+	persist(
+		(set) => ({
 			token: null,
 			user: null,
-		});
-	},
-}));
+
+			login: (token, user) =>
+				set({
+					token,
+					user,
+				}),
+
+			logout: () =>
+				set({
+					token: null,
+					user: null,
+				}),
+		}),
+		{
+			name: 'auth-storage',
+		},
+	),
+);
+//o Zustand salva automaticamente no Local Storage.
