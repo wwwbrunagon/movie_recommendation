@@ -68,8 +68,264 @@ backend/
 ├── tsconfig.json
 └── docker-compose.yml
 ```
+### Running the Project Locally
+
+#### Prerequisites
+
+Make sure the following tools are installed:
+
+* Node.js
+* Docker
+* PostgreSQL (via Docker)
+* Prisma CLI
+
+Verify installations:
+
+```bash
+node -v
+npm -v
+docker -v
+```
+
+---
+
+#### 1. Start PostgreSQL
+
+Start the database container:
+
+```bash
+docker compose up -d
+```
+
+Verify that PostgreSQL is running:
+
+```bash
+docker ps
+```
+
+Expected output:
+
+```txt
+postgres
+0.0.0.0:5432->5432/tcp
+```
+
+---
+
+#### 2. Configure Environment Variables
+
+Create a `.env` file in the backend root directory:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/movie_db"
+JWT_SECRET="your_secret_key"
+PORT=3000
+```
+
+Adjust the values according to your local setup.
+
+---
+
+#### 3. Install Dependencies
+
+```bash
+npm install
+```
+
+---
+
+#### 4. Run Prisma Migrations
+
+Create and apply database tables:
+
+```bash
+npx prisma migrate dev
+```
+
+Verify migration status:
+
+```bash
+npx prisma migrate status
+```
+
+---
+
+#### 5. Test Database Connection
+
+Confirm Prisma can connect to PostgreSQL:
+
+```bash
+npx prisma db pull
+```
+
+If successful, Prisma will introspect the database schema without errors.
+
+---
+
+#### 6. Start the Backend Server
+
+```bash
+npm run dev
+```
+
+Expected output:
+
+```txt
+Server running on port 3000
+```
+
+---
+
+#### 7. Inspect the Database
+
+Launch Prisma Studio:
+
+```bash
+npx prisma studio
+```
+
+Open:
+
+```txt
+http://localhost:5555
+```
+
+You can view and edit database records directly from the browser.
+
+---
+
+### API Testing
+
+#### Register a User
+
+```bash
+curl -X POST http://localhost:3000/auth/register \
+-H "Content-Type: application/json" \
+-d '{
+  "name": "Bruna",
+  "email": "bruna@email.com",
+  "password": "123456"
+}'
+```
+
+Expected response:
+
+```json
+{
+  "id": "...",
+  "email": "bruna@email.com"
+}
+```
+
+---
+
+#### Verify User Creation
+
+Using Prisma Studio or a SQL client:
+
+```sql
+SELECT * FROM "User";
+```
+
+---
+
+#### Login
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "bruna@email.com",
+  "password": "123456"
+}'
+```
+
+Expected response:
+
+```json
+{
+  "token": "eyJ..."
+}
+```
+
+Copy the JWT token for authenticated requests.
+
+---
+
+#### Access a Protected Route
+
+Example:
+
+```bash
+curl http://localhost:3000/users/me \
+-H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+Expected response:
+
+```json
+{
+  "id": "...",
+  "email": "bruna@email.com"
+}
+```
+
+---
+
+### Test Unauthorized Access
+
+Request a protected endpoint without a token:
+
+```bash
+curl http://localhost:3000/users/me
+```
+
+Expected response:
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+Expected status code:
+
+```txt
+401
+```
+
+---
+
+### Development Checklist
+
+Before starting development, verify the following:
+
+```bash
+docker ps
+```
+
+```bash
+npx prisma migrate status
+```
+
+```bash
+npm run dev
+```
+
+```bash
+npx prisma studio
+```
+
+```bash
+curl -X POST http://localhost:3000/auth/login ...
+```
+
+If all commands execute successfully, the local environment is ready for development and testing.
+
+
 
 #
+# 
 
 ### Frontend:
 
