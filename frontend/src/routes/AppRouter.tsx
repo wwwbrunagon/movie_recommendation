@@ -1,14 +1,12 @@
 import {
-  BrowserRouter,
-  Routes,
-  Route,
+	BrowserRouter,
+	Route,
+	Routes,
 } from "react-router-dom";
 
-import { LoginPage } from "/Login/LoginPage";
-
-import { RegisterPage } from "../Register/RegisterPage";
-
-import { HomePage } from "/HomePage";
+import { HomePage } from "../pages/Home/HomePage";
+import { LoginPage } from "../pages/Login/LoginPage";
+import { RegisterPage } from "../pages/Register/RegisterPage";
 
 import { ProtectedRoute } from "./ProtectedRoute";
 
