@@ -18,18 +18,28 @@ export const authMiddleware = (
     });
   }
 
-  const [, token] = authHeader.split(' ');
+  const [scheme, token] = authHeader.split(' ');
 
-  if (!token) {
+  if (scheme !== 'Bearer' || !token) {
     return res.status(401).json({
       message: 'Invalid token format',
+    });
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    console.error('JWT_SECRET is not configured');
+
+    return res.status(500).json({
+      message: 'Server configuration error',
     });
   }
 
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET!
+      jwtSecret
     ) as JwtPayload;
 
     req.user = {

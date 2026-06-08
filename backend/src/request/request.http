@@ -1,0 +1,28 @@
+@baseUrl=http://localhost:3000
+
+###
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "bruna@email.com",
+  "password": "123456"
+}
+
+###
+
+# Movies 
+GET {{baseUrl}}/movies/search?query=batman
+Authorization: Bearer {{login.response.body.token}}
+
+###
+
+GET {{baseUrl}}/movies/550
+Authorization: Bearer {{login.response.body.token}}
+
+###
+
+GET {{baseUrl}}/movies/550/credits
+Authorization: Bearer {{login.response.body.token}}

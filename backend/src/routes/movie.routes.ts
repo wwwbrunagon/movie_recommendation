@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import movieController from '../controller/movie.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 router.get('/search', movieController.searchMovies);
 
