@@ -1,0 +1,4 @@
+export const USER_ERRORS = {
+	UNAUTHORIZED: 'UNAUTHORIZED',
+	USER_NOT_FOUND: 'USER_NOT_FOUND',
+} as const;
