@@ -19,9 +19,9 @@ Essa documentação descreve a arquitetura, o fluxo de dados, as responsabilidad
 - `src/controller/` - implementa a lógica de recebimento de requisições e devassa respostas.
 - `src/services/` - contém regras de negócio, chamadas à API externa e integração com repositórios.
 - `src/repositories/` - abstrai o acesso ao banco de dados usando Prisma.
-- `src/middlewares/` - valida token JWT e valida входные dados de request.
+- `src/middlewares/` - valida token JWT, valida dados de request, e trata erros globalmente.
 - `src/config/` - configuração de cliente Prisma.
-- `src/utils/` - implementa auxílio de geração de tokens JWT.
+- `src/utils/` - utilitários como geração de tokens JWT, tratamento de erros (AppError) e logger.
 - `src/validators/` - valida esquemas de request com Zod.
 - `src/constants/` - mensagens e códigos de erro reutilizáveis.
 - `prisma/schema.prisma` - define o modelo do banco de dados.
@@ -79,6 +79,15 @@ Essa documentação descreve a arquitetura, o fluxo de dados, as responsabilidad
   - token JWT válido
 - Ele extrai `userId` do payload e adiciona em `req.user`.
 - Rotas de usuário e filmes usam esse middleware para proteger endpoints.
+
+### 7. Tratamento de erros
+
+- Qualquer erro não capturado é automaticamente tratado pelo middleware global `error.middleware.ts`.
+- Se um erro é lançado em um service ou controller, o middleware:
+  - Detecta o tipo de erro (AppError, ZodError, PrismaError, etc.)
+  - Mapeia para o status HTTP apropriado
+  - Registra o erro com contexto (endpoint, userId)
+  - Retorna resposta JSON padronizada com `success`, `message` e `code`
 
 ---
 
@@ -184,6 +193,96 @@ Observações:
 - Os códigos de erro são definidos em `src/constants/*.ts`.
 - As mensagens de frontend são tratadas em `AUTH_MESSAGES` e usadas em respostas de erro.
 - Isso facilita tradução e manutenção futura.
+
+---
+
+## Tratamento global de erros
+
+### Middleware de erro centralizado
+
+O backend implementa um middleware global de tratamento de erros em `src/middlewares/error.middleware.ts` que padroniza todas as respostas de erro.
+
+#### Características principais
+
+- **Classe AppError**: customização de erro em `src/utils/app-error.ts`
+  - Estende `Error` com propriedades `statusCode`, `errorCode`, `isOperational`
+  - Métodos estáticos: `badRequest()`, `unauthorized()`, `notFound()`, `conflict()`, `internalServerError()`, etc.
+  - Garante consistência na estrutura de erros em toda a aplicação
+
+- **Logger próprio**: `src/utils/logger.ts`
+  - Função `logError(error, context)` que loga erros com contexto (endpoint, userId)
+  - Diferencia tipos de erro (AppError, SyntaxError, TypeError, desconhecidos)
+  - Sanitiza dados sensíveis (passwords, tokens) antes de logar
+
+- **Middleware error.middleware.ts**
+  - Registrado como **último middleware** em `src/app.ts` (após todas as rotas)
+  - Captura e trata todos os tipos de erro:
+    - `AppError`: usa statusCode e errorCode definidos
+    - `ZodError`: retorna `400 VALIDATION_ERROR` com detalhes dos campos
+    - `PrismaError`: mapeia códigos específicos para status HTTP apropriados
+      - P2025 → `404 NOT_FOUND` (record não encontrado)
+      - P2002 → `409 CONFLICT` (violação de unique constraint)
+      - P2014 → `400 BAD_REQUEST` (violação de relação obrigatória)
+      - P2003 → `400 BAD_REQUEST` (foreign key constraint falhou)
+    - Erros desconhecidos → `500 INTERNAL_SERVER_ERROR`
+
+#### Formato de resposta padrão
+
+Todas as respostas de erro seguem o formato:
+
+```json
+{
+	"success": false,
+	"message": "Descrição do erro",
+	"code": "ERROR_CODE",
+	"errors": { "field": ["Mensagem de erro"] }
+}
+```
+
+Exemplo de erro de validação:
+
+```json
+{
+	"success": false,
+	"message": "Validation error",
+	"code": "VALIDATION_ERROR",
+	"errors": {
+		"email": ["Invalid email format"],
+		"password": ["String must contain at least 8 character(s)"]
+	}
+}
+```
+
+#### Tratamento de erros não capturados
+
+O arquivo `src/server.ts` implementa listeners para erros não esperados:
+
+- `uncaughtException`: erros síncronos não capturados em try-catch
+- `unhandledRejection`: promises rejeitadas sem `.catch()` ou try-catch
+- Ambos triggam logging automático e finalizam o processo gracefully
+
+#### Fluxo de tratamento de erro
+
+```text
+[Request] -> [Route/Middleware] -> [Erro thrown]
+                                      |
+                                      v
+                        [error.middleware.ts]
+                                      |
+                    ___________________+___________________
+                   |                   |                   |
+              [AppError?]      [ZodError?]         [PrismaError?]
+                   |                   |                   |
+            [usar statusCode]  [map para 400]     [mapear código]
+                   |                   |                   |
+                   |___________________|___________________|
+                                       |
+                                       v
+                         [logError com contexto]
+                                       |
+                                       v
+                      [Response JSON com formato padrão]
+```
 
 ---
 
