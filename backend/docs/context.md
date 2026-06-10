@@ -319,7 +319,7 @@ O backend depende de variáveis de ambiente para configuração segura:
 - Implementar `Controller -> Service -> Repository` como padrão em novos módulos.
 - Manter mensagens de erro e constantes centralizadas em `src/constants`.
 - Adicionar testes unitários para services e middlewares.
-- Considerar a criação de manipuladores de erros globais para evitar repetição de try/catch.
+- Manter o tratamento global de erros para evitar repetição de try/catch em controllers.
 - Separar integrações com APIs externas em clients dedicados, se o backend crescer.
 
 ---

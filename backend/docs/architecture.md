@@ -221,9 +221,10 @@ Request -> Route -> Middleware -> Controller -> Service -> Repository/External A
 
 ### Tratamento de erro
 
-- Use blocos `try/catch` nos controllers.
-- Retorne respostas específicas para erros conhecidos.
-- Logue erros inesperados com `console.error` e responda `500` para falhas internas.
+- Controllers devem deixar erros subirem para o middleware global.
+- Use `AppError` para erros operacionais conhecidos.
+- Use `asyncHandler` nas rotas para encaminhar falhas async ao `errorMiddleware`.
+- O `errorMiddleware` centraliza status HTTP, formato da resposta e logging.
 
 ### Novas features
 
