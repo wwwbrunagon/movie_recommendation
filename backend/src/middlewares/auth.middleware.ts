@@ -1,55 +1,52 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { AppError } from '../utils/app-error';
 
 interface JwtPayload {
-  userId: string;
+	userId: string;
 }
 
 export const authMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
+	req: Request,
+	res: Response,
+	next: NextFunction,
 ) => {
-  const authHeader = req.headers.authorization;
+	const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(401).json({
-      message: 'Token not provided',
-    });
-  }
+	if (!authHeader) {
+		return next(
+			AppError.unauthorized('Token not provided', 'TOKEN_NOT_PROVIDED'),
+		);
+	}
 
-  const [scheme, token] = authHeader.split(' ');
+	const [scheme, token] = authHeader.split(' ');
 
-  if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({
-      message: 'Invalid token format',
-    });
-  }
+	if (scheme !== 'Bearer' || !token) {
+		return next(
+			AppError.unauthorized('Invalid token format', 'INVALID_TOKEN_FORMAT'),
+		);
+	}
 
-  const jwtSecret = process.env.JWT_SECRET;
+	const jwtSecret = process.env.JWT_SECRET;
 
-  if (!jwtSecret) {
-    console.error('JWT_SECRET is not configured');
+	if (!jwtSecret) {
+		return next(
+			AppError.internalServerError(
+				'JWT_SECRET is not configured',
+				'JWT_SECRET_NOT_CONFIGURED',
+			),
+		);
+	}
 
-    return res.status(500).json({
-      message: 'Server configuration error',
-    });
-  }
+	try {
+		const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
 
-  try {
-    const decoded = jwt.verify(
-      token,
-      jwtSecret
-    ) as JwtPayload;
+		req.user = {
+			userId: decoded.userId,
+		};
 
-    req.user = {
-      userId: decoded.userId,
-    };
-
-    next();
-  } catch {
-    return res.status(401).json({
-      message: 'Invalid token',
-    });
-  }
+		next();
+	} catch {
+		return next(AppError.unauthorized('Invalid token', 'INVALID_TOKEN'));
+	}
 };

@@ -47,8 +47,10 @@ export const errorMiddleware = (
 	err: unknown,
 	req: Request,
 	res: Response,
-	next: NextFunction,
+	_next: NextFunction,
 ): void => {
+	const isProduction = process.env.NODE_ENV === 'production';
+
 	// Create error response object
 	let response: ErrorResponse = {
 		success: false,
@@ -126,7 +128,7 @@ export const errorMiddleware = (
 	else if (err instanceof Error) {
 		response = {
 			success: false,
-			message: err.message,
+			message: isProduction ? 'Internal server error' : err.message,
 			code: 'INTERNAL_SERVER_ERROR',
 		};
 

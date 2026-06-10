@@ -1,37 +1,67 @@
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import app from './app';
+import { AppError } from './utils/app-error';
 import { logError } from './utils/logger';
 
-dotenv.config();
-
 const PORT = process.env.PORT || 3000;
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+const EXIT_SUCCESS = 0;
+const EXIT_FAILURE = 1;
 
 const server = app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);
 });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error: Error) => {
-	console.error('❌ Uncaught Exception:', error);
-	logError(error, { type: 'uncaughtException' });
-	process.exit(1);
+const normalizeError = (error: unknown): Error => {
+	if (error instanceof Error) {
+		return error;
+	}
+
+	return new Error(String(error));
+};
+
+const shutdown = (exitCode: number): void => {
+	const timeout = setTimeout(() => {
+		logError(
+			AppError.internalServerError(
+				'Forced shutdown after timeout',
+				'FORCED_SHUTDOWN_TIMEOUT',
+			),
+			{ type: 'shutdown' },
+		);
+		process.exit(EXIT_FAILURE);
+	}, SHUTDOWN_TIMEOUT_MS);
+
+	server.close((error?: Error) => {
+		clearTimeout(timeout);
+
+		if (error) {
+			logError(error, { type: 'shutdown' });
+			process.exit(EXIT_FAILURE);
+		}
+
+		console.log('HTTP server closed');
+		process.exit(exitCode);
+	});
+};
+
+server.on('error', (error: Error) => {
+	logError(error, { type: 'serverError' });
+	process.exit(EXIT_FAILURE);
 });
 
-// Handle unhandled promise rejections
-process.on(
-	'unhandledRejection',
-	(reason: unknown, promise: Promise<unknown>) => {
-		console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-		logError(new Error(String(reason)), { type: 'unhandledRejection' });
-		process.exit(1);
-	},
-);
+process.on('uncaughtException', (error: Error) => {
+	logError(error, { type: 'uncaughtException' });
+	shutdown(EXIT_FAILURE);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+	logError(normalizeError(reason), { type: 'unhandledRejection' });
+	shutdown(EXIT_FAILURE);
+});
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
 	console.log('SIGTERM signal received: closing HTTP server');
-	server.close(() => {
-		console.log('HTTP server closed');
-		process.exit(0);
-	});
+	shutdown(EXIT_SUCCESS);
 });
