@@ -1,8 +1,73 @@
 @baseUrl=http://localhost:3000
+@name=Manual Test
+# Change the suffix before running a new full register/login flow.
+@email=manual-test-local-001@email.com
+@password=123456
+@wrongPassword=wrong123
+@movieId=550
+@movieQuery=batman
 
 ###
 
+# Health
+GET {{baseUrl}}/health
+
+###
+
+# Auth - register valid user
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "{{name}}",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+# Auth - register duplicate user
+# Run after "Auth - register valid user".
+# Expected: 409 USER_ALREADY_EXISTS
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "{{name}}",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+# Auth - login valid user
 # @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+# Auth - login invalid password
+# Expected: 401 INVALID_CREDENTIALS
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{wrongPassword}}"
+}
+
+###
+
+# Auth - login existing local user
+# Use this if you want to test without registering a new user first.
+# @name loginExisting
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -13,16 +78,57 @@ Content-Type: application/json
 
 ###
 
-# Movies 
-GET {{baseUrl}}/movies/search?query=batman
+# Users - me without token
+# Expected: 401 TOKEN_NOT_PROVIDED
+GET {{baseUrl}}/users/me
+
+###
+
+# Users - me with token
+GET {{baseUrl}}/users/me
 Authorization: Bearer {{login.response.body.token}}
 
 ###
 
-GET {{baseUrl}}/movies/550
+# Movies - search valid query
+GET {{baseUrl}}/movies/search?query={{movieQuery}}
 Authorization: Bearer {{login.response.body.token}}
 
 ###
 
-GET {{baseUrl}}/movies/550/credits
+# Movies - search missing query
+# Expected: 400 VALIDATION_ERROR
+GET {{baseUrl}}/movies/search
 Authorization: Bearer {{login.response.body.token}}
+
+###
+
+# Movies - details valid id
+GET {{baseUrl}}/movies/{{movieId}}
+Authorization: Bearer {{login.response.body.token}}
+
+###
+
+# Movies - details invalid id
+# Expected: 400 VALIDATION_ERROR
+GET {{baseUrl}}/movies/abc
+Authorization: Bearer {{login.response.body.token}}
+
+###
+
+# Movies - credits valid id
+GET {{baseUrl}}/movies/{{movieId}}/credits
+Authorization: Bearer {{login.response.body.token}}
+
+###
+
+# Movies - credits invalid id
+# Expected: 400 VALIDATION_ERROR
+GET {{baseUrl}}/movies/abc/credits
+Authorization: Bearer {{login.response.body.token}}
+
+###
+
+# Alternative protected request token source:
+# If you used "login existing local user", replace the Authorization token above with:
+# Authorization: Bearer {{loginExisting.response.body.token}}
