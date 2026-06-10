@@ -1,130 +1,46 @@
 import { Request, Response } from 'express';
 import tmdbService from '../services/tmdb.service';
-import { MOVIE_ERRORS } from '../constants/movie-errors';
+import { AppError } from '../utils/app-error';
 
 class MovieController {
-  async searchMovies(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    try {
-      const { query } = req.query;
+	async searchMovies(req: Request, res: Response): Promise<Response> {
+		const { query } = req.query;
 
-      if (!query) {
-        throw new Error(
-          MOVIE_ERRORS.QUERY_REQUIRED
-        );
-      }
+		if (!query) {
+			throw AppError.badRequest(
+				'Query parameter is required',
+				'QUERY_REQUIRED',
+			);
+		}
 
-      const movies =
-        await tmdbService.searchMovies(
-          String(query)
-        );
+		const movies = await tmdbService.searchMovies(String(query));
 
-      return res.status(200).json(movies);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message ===
-          MOVIE_ERRORS.QUERY_REQUIRED
-      ) {
-        return res.status(400).json({
-          message: 'Query parameter is required',
-        });
-      }
+		return res.status(200).json(movies);
+	}
 
-      console.error(
-        'Search movies error:',
-        error
-      );
+	async getMovieDetails(req: Request, res: Response): Promise<Response> {
+		const movieId = Number(req.params.id);
 
-      return res.status(500).json({
-        message: 'Internal server error',
-      });
-    }
-  }
+		if (Number.isNaN(movieId)) {
+			throw AppError.badRequest('Invalid movie id', 'INVALID_MOVIE_ID');
+		}
 
-  async getMovieDetails(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    try {
-      const movieId = Number(req.params.id);
+		const movie = await tmdbService.getMovieDetails(movieId);
 
-      if (Number.isNaN(movieId)) {
-        throw new Error(
-          MOVIE_ERRORS.INVALID_MOVIE_ID
-        );
-      }
+		return res.status(200).json(movie);
+	}
 
-      const movie =
-        await tmdbService.getMovieDetails(
-          movieId
-        );
+	async getMovieCredits(req: Request, res: Response): Promise<Response> {
+		const movieId = Number(req.params.id);
 
-      return res.status(200).json(movie);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message ===
-          MOVIE_ERRORS.INVALID_MOVIE_ID
-      ) {
-        return res.status(400).json({
-          message: 'Invalid movie id',
-        });
-      }
+		if (Number.isNaN(movieId)) {
+			throw AppError.badRequest('Invalid movie id', 'INVALID_MOVIE_ID');
+		}
 
-      console.error(
-        'Get movie details error:',
-        error
-      );
+		const credits = await tmdbService.getMovieCredits(movieId);
 
-      return res.status(500).json({
-        message: 'Internal server error',
-      });
-    }
-  }
-
-  async getMovieCredits(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    try {
-      const movieId = Number(req.params.id);
-
-      if (Number.isNaN(movieId)) {
-        throw new Error(
-          MOVIE_ERRORS.INVALID_MOVIE_ID
-        );
-      }
-
-      const credits =
-        await tmdbService.getMovieCredits(
-          movieId
-        );
-
-      return res.status(200).json(credits);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message ===
-          MOVIE_ERRORS.INVALID_MOVIE_ID
-      ) {
-        return res.status(400).json({
-          message: 'Invalid movie id',
-        });
-      }
-
-      console.error(
-        'Get movie credits error:',
-        error
-      );
-
-      return res.status(500).json({
-        message: 'Internal server error',
-      });
-    }
-  }
+		return res.status(200).json(credits);
+	}
 }
 
 export default new MovieController();
