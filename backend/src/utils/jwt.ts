@@ -1,11 +1,15 @@
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET!;
+import jwt from 'jsonwebtoken';
+import { AppError } from './app-error';
 
 export function generateToken(userId: string) {
-  return jwt.sign(
-    { userId },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+	const jwtSecret = process.env.JWT_SECRET;
+
+	if (!jwtSecret) {
+		throw AppError.internalServerError(
+			'JWT_SECRET is not configured',
+			'JWT_SECRET_NOT_CONFIGURED',
+		);
+	}
+
+	return jwt.sign({ userId }, jwtSecret, { expiresIn: '7d' });
 }

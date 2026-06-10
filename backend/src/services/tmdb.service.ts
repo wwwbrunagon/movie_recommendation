@@ -1,33 +1,82 @@
-import axios from "axios";
+import axios from 'axios';
+import { AppError } from '../utils/app-error';
 
-const tmdbApi = axios.create({
-  baseURL: process.env.TMDB_BASE_URL,
-  params: {
-    api_key: process.env.TMDB_API_KEY,
-    language: "en-US",
-  },
-});
+const tmdbApi = axios.create();
 
 class TmdbService {
-  async searchMovies(query: string) {
-    const response = await tmdbApi.get("/search/movie", {
-      params: { query },
-    });
+	private getRequestConfig() {
+		const baseURL = process.env.TMDB_BASE_URL;
+		const apiKey = process.env.TMDB_API_KEY;
 
-    return response.data;
-  }
+		if (!baseURL || !apiKey) {
+			throw AppError.internalServerError(
+				'TMDB configuration is missing',
+				'TMDB_CONFIGURATION_ERROR',
+			);
+		}
 
-  async getMovieDetails(movieId: number) {
-    const response = await tmdbApi.get(`/movie/${movieId}`);
+		return {
+			baseURL,
+			params: {
+				api_key: apiKey,
+				language: 'en-US',
+			},
+		};
+	}
 
-    return response.data;
-  }
+	private handleTmdbError(error: unknown): never {
+		if (axios.isAxiosError(error)) {
+			if (error.response?.status === 404) {
+				throw AppError.notFound('Movie not found', 'MOVIE_NOT_FOUND');
+			}
 
-  async getMovieCredits(movieId: number) {
-    const response = await tmdbApi.get(`/movie/${movieId}/credits`);
+			throw AppError.serviceUnavailable(
+				'TMDB service unavailable',
+				'TMDB_SERVICE_UNAVAILABLE',
+			);
+		}
 
-    return response.data;
-  }
+		throw error;
+	}
+
+	async searchMovies(query: string) {
+		const config = this.getRequestConfig();
+
+		try {
+			const response = await tmdbApi.get('/search/movie', {
+				...config,
+				params: { ...config.params, query },
+			});
+
+			return response.data;
+		} catch (error) {
+			this.handleTmdbError(error);
+		}
+	}
+
+	async getMovieDetails(movieId: number) {
+		const config = this.getRequestConfig();
+
+		try {
+			const response = await tmdbApi.get(`/movie/${movieId}`, config);
+
+			return response.data;
+		} catch (error) {
+			this.handleTmdbError(error);
+		}
+	}
+
+	async getMovieCredits(movieId: number) {
+		const config = this.getRequestConfig();
+
+		try {
+			const response = await tmdbApi.get(`/movie/${movieId}/credits`, config);
+
+			return response.data;
+		} catch (error) {
+			this.handleTmdbError(error);
+		}
+	}
 }
 
 export default new TmdbService();
