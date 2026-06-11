@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
-import { ROUTES } from '../constants/routes';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import { ROUTES } from '../shared/constants/routes';
 
-import { useAuth } from '../hooks/useAuth';
 
 export function ProtectedRoute() {
 	const { token } = useAuth();

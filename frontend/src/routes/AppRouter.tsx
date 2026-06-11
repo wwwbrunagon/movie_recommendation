@@ -4,9 +4,9 @@ import {
 	Routes,
 } from "react-router-dom";
 
-import { HomePage } from "../pages/Home/HomePage";
-import { LoginPage } from "../pages/Login/LoginPage";
-import { RegisterPage } from "../pages/Register/RegisterPage";
+import { LoginPage } from "../features/auth/pages/Login/LoginPage";
+import { RegisterPage } from "../features/auth/pages/Register/RegisterPage";
+import { HomePage } from "../features/movies/pages/Home/HomePage";
 
 import { ProtectedRoute } from "./ProtectedRoute";
 

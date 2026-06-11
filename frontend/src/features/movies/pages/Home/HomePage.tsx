@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { ROUTES } from '../../constants/routes';
-import { useAuth } from '../../hooks/useAuth';
+import { ROUTES } from '../../../../shared/constants/routes';
+import { useAuth } from '../../../auth/hooks/useAuth';
+import { useAuthStore } from '../../../auth/store/auth.store';
 import { useMovieCredits } from '../../hooks/useMovieCredits';
 import { useMovieDetails } from '../../hooks/useMovieDetails';
 import { useMovieSearch } from '../../hooks/useMovieSearch';
-import { useAuthStore } from '../../store/auth.store';
-
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
-const FALLBACK_POSTER =
-	'https://placehold.co/500x750?text=Sem+imagem';
+import { getMoviePosterUrl, getReleaseYear } from '../../utils/movie-formatters';
 
 export function HomePage() {
 	const { user } = useAuth();
@@ -41,14 +38,6 @@ export function HomePage() {
 		() => movieCredits?.cast.slice(0, 6) ?? [],
 		[movieCredits],
 	);
-
-	function getImageUrl(path: string | null) {
-		return path ? `${IMAGE_BASE_URL}${path}` : FALLBACK_POSTER;
-	}
-
-	function getReleaseYear(date: string) {
-		return date ? date.slice(0, 4) : 'N/A';
-	}
 
 	function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -163,7 +152,7 @@ export function HomePage() {
 									}`}
 								>
 									<img
-										src={getImageUrl(movie.poster_path)}
+										src={getMoviePosterUrl(movie.poster_path)}
 										alt={movie.title}
 										className="h-24 w-16 rounded object-cover"
 									/>
@@ -208,7 +197,7 @@ export function HomePage() {
 						{selectedMovie && !isLoadingDetails && (
 							<div className="space-y-5">
 								<img
-									src={getImageUrl(selectedMovie.poster_path)}
+									src={getMoviePosterUrl(selectedMovie.poster_path)}
 									alt={selectedMovie.title}
 									className="aspect-[2/3] w-full rounded-lg object-cover"
 								/>

@@ -3,7 +3,7 @@ import axios from "axios";
 import {
   getAccessToken,
   logout,
-} from "../store/auth.helpers";
+} from "../../features/auth/store/auth.helpers";
 
 export const api = axios.create({
   baseURL:
