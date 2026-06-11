@@ -5,9 +5,13 @@ import { ROUTES } from '../shared/constants/routes';
 
 
 export function ProtectedRoute() {
-	const { token } = useAuth();
+	const { accessToken, isBootstrapping } = useAuth();
 
-	if (!token) {
+	if (isBootstrapping) {
+		return null;
+	}
+
+	if (!accessToken) {
 		return <Navigate to={ROUTES.LOGIN} replace />;
 	}
 

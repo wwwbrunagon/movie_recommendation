@@ -1,9 +1,17 @@
 import { useAuthStore } from "./auth.store";
+import type { User } from "../types/user.types";
 
 export const getAccessToken = () =>
-  useAuthStore.getState().token;
+  useAuthStore.getState().accessToken;
 
-export const logout = () =>
-  useAuthStore.getState().logout();
+export const setAuthSession = (
+  accessToken: string,
+  user: User,
+) =>
+  useAuthStore.getState().setSession(
+    accessToken,
+    user,
+  );
 
-//permite acessar o store fora dos componentes React.
+export const clearAuthSession = () =>
+  useAuthStore.getState().clearSession();

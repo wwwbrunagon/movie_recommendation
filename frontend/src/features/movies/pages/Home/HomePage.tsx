@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { ROUTES } from '../../../../shared/constants/routes';
+import { useLogout } from '../../../auth/hooks/useLogout';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useAuthStore } from '../../../auth/store/auth.store';
 import { useMovieCredits } from '../../hooks/useMovieCredits';
@@ -10,8 +11,10 @@ import { useMovieSearch } from '../../hooks/useMovieSearch';
 import { getMoviePosterUrl, getReleaseYear } from '../../utils/movie-formatters';
 
 export function HomePage() {
+	const navigate = useNavigate();
 	const { user } = useAuth();
-	const logout = useAuthStore((state) => state.logout);
+	const clearSession = useAuthStore((state) => state.clearSession);
+	const { mutateAsync: logout, isPending: isLoggingOut } = useLogout();
 	const [searchInput, setSearchInput] = useState('');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedMovieId, setSelectedMovieId] = useState<number | null>(null);
@@ -48,8 +51,13 @@ export function HomePage() {
 		setSelectedMovieId(null);
 	}
 
-	function handleLogout() {
-		logout();
+	async function handleLogout() {
+		try {
+			await logout();
+		} finally {
+			clearSession();
+			navigate(ROUTES.LOGIN, { replace: true });
+		}
 	}
 
 	return (
@@ -71,9 +79,10 @@ export function HomePage() {
 						<button
 							type="button"
 							onClick={handleLogout}
+							disabled={isLoggingOut}
 							className="rounded bg-black px-4 py-2 text-white"
 						>
-							Sair
+							{isLoggingOut ? 'Saindo...' : 'Sair'}
 						</button>
 
 						<Link

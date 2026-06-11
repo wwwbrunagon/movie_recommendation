@@ -1,37 +1,36 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+
 import type { User } from '../types/user.types';
 
 interface AuthStore {
-	token: string | null;
+	accessToken: string | null;
 	user: User | null;
+	isBootstrapping: boolean;
 
-	login: (token: string, user: User) => void;
-
-	logout: () => void;
+	setSession: (accessToken: string, user: User) => void;
+	clearSession: () => void;
+	setBootstrapping: (isBootstrapping: boolean) => void;
 }
 
-export const useAuthStore = create<AuthStore>()(
-	persist(
-		(set) => ({
-			token: null,
-			user: null,
+export const useAuthStore = create<AuthStore>()((set) => ({
+	accessToken: null,
+	user: null,
+	isBootstrapping: true,
 
-			login: (token, user) =>
-				set({
-					token,
-					user,
-				}),
-
-			logout: () =>
-				set({
-					token: null,
-					user: null,
-				}),
+	setSession: (accessToken, user) =>
+		set({
+			accessToken,
+			user,
 		}),
-		{
-			name: 'auth-storage',
-		},
-	),
-);
-//o Zustand salva automaticamente no Local Storage.
+
+	clearSession: () =>
+		set({
+			accessToken: null,
+			user: null,
+		}),
+
+	setBootstrapping: (isBootstrapping) =>
+		set({
+			isBootstrapping,
+		}),
+}));

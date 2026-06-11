@@ -21,7 +21,7 @@ export function LoginPage() {
 	const emailInputId = useId();
 	const passwordInputId = useId();
 
-	const loginStore = useAuthStore((state) => state.login);
+	const setSession = useAuthStore((state) => state.setSession);
 
 	const { mutateAsync, isPending } = useLogin();
 
@@ -66,7 +66,7 @@ export function LoginPage() {
 				password: data.password,
 			});
 
-			loginStore(response.token, response.user);
+			setSession(response.accessToken, response.user);
 
 			navigate(ROUTES.HOME, { replace: true });
 		} catch (error) {

@@ -6,6 +6,6 @@ export const useAuth = () => {
   return {
     ...store,
     isAuthenticated:
-      !!store.token,
+      !!store.accessToken,
   };
 };

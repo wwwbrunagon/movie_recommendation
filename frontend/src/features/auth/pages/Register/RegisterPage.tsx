@@ -23,7 +23,7 @@ export function RegisterPage() {
 	const passwordInputId = useId();
 	const confirmPasswordInputId = useId();
 
-	const loginStore = useAuthStore((state) => state.login);
+	const setSession = useAuthStore((state) => state.setSession);
 
 	const { mutateAsync, isPending } = useRegister();
 
@@ -75,7 +75,7 @@ export function RegisterPage() {
 				password: data.password,
 			});
 
-			loginStore(response.token, response.user);
+			setSession(response.accessToken, response.user);
 
 			navigate(ROUTES.HOME, { replace: true });
 		} catch (error) {
