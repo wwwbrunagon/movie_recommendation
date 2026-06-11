@@ -69,8 +69,9 @@ Arquivos principais:
 Responsabilidades:
 
 - validar formularios de login e cadastro
-- chamar `/auth/login` e `/auth/register`
-- persistir token e usuario autenticado com Zustand
+- chamar `/auth/login`, `/auth/register`, `/auth/refresh` e `/auth/logout`
+- manter access token e usuario apenas em memoria com Zustand
+- restaurar sessao via refresh token em cookie HttpOnly
 - expor estado de autenticacao para rotas e paginas
 
 ### Movies
@@ -102,28 +103,33 @@ Arquivos principais:
 
 Responsabilidades:
 
-- `api.ts`: configurar Axios, `baseURL`, token em requests e logout em `401`
+- `api.ts`: configurar Axios, `baseURL`, `withCredentials`, access token em requests e refresh automatico em `401`
 - `routes.ts`: centralizar caminhos usados pelo router e links
 - `QueryProvider.tsx`: disponibilizar React Query para a aplicacao
 
 ## Bootstrap E Roteamento
 
 - [main.tsx](/Users/goat/Projects/movie_recommendation/frontend/src/main.tsx:1) monta o React no DOM.
-- [App.tsx](/Users/goat/Projects/movie_recommendation/frontend/src/App.tsx:1) aplica `QueryProvider` e renderiza `AppRouter`.
+- [App.tsx](/Users/goat/Projects/movie_recommendation/frontend/src/App.tsx:1) inicializa bootstrap de sessao, aplica `QueryProvider` e renderiza `AppRouter`.
 - [AppRouter.tsx](/Users/goat/Projects/movie_recommendation/frontend/src/routes/AppRouter.tsx:1) define `/login`, `/register` e `/`.
-- [ProtectedRoute.tsx](/Users/goat/Projects/movie_recommendation/frontend/src/routes/ProtectedRoute.tsx:1) redireciona usuarios sem token para `/login`.
+- [ProtectedRoute.tsx](/Users/goat/Projects/movie_recommendation/frontend/src/routes/ProtectedRoute.tsx:1) aguarda bootstrap de sessao e redireciona usuarios sem access token para `/login`.
 
 ## Contrato Com O Backend
 
-Esta refatoracao e apenas estrutural no frontend. Os contratos HTTP permanecem iguais:
+Contratos HTTP de autenticacao:
 
 - `POST /auth/login`
 - `POST /auth/register`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+
+`login`, `register` e `refresh` retornam `{ accessToken, user }`. O refresh token fica em cookie `HttpOnly`, enviado pelo browser com `withCredentials`, e nao deve ser acessado pelo JavaScript.
+
+Contratos de filmes:
+
 - `GET /movies/search`
 - `GET /movies/:id`
 - `GET /movies/:id/credits`
-
-Nao ha mudanca obrigatoria no backend para suportar a arquitetura feature-based do frontend.
 
 ## Guia Para Novas Features
 

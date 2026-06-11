@@ -1,4 +1,5 @@
 @baseUrl=http://localhost:3000
+@clientOrigin=http://localhost:5173
 @name=Manual Test
 # Change the suffix before running a new full register/login flow.
 @email=manual-test-local-001@email.com
@@ -18,6 +19,7 @@ GET {{baseUrl}}/health
 # @name register
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
+Origin: {{clientOrigin}}
 
 {
   "name": "{{name}}",
@@ -32,6 +34,7 @@ Content-Type: application/json
 # Expected: 409 USER_ALREADY_EXISTS
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
+Origin: {{clientOrigin}}
 
 {
   "name": "{{name}}",
@@ -45,6 +48,7 @@ Content-Type: application/json
 # @name login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
+Origin: {{clientOrigin}}
 
 {
   "email": "{{email}}",
@@ -57,6 +61,7 @@ Content-Type: application/json
 # Expected: 401 INVALID_CREDENTIALS
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
+Origin: {{clientOrigin}}
 
 {
   "email": "{{email}}",
@@ -70,11 +75,29 @@ Content-Type: application/json
 # @name loginExisting
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
+Origin: {{clientOrigin}}
 
 {
   "email": "bruna@email.com",
   "password": "123456"
 }
+
+###
+
+###
+
+# Auth - refresh session
+# Uses the HttpOnly refresh cookie set by login/register.
+# @name refresh
+POST {{baseUrl}}/auth/refresh
+Origin: {{clientOrigin}}
+
+###
+
+# Auth - logout current session
+# Expected: 204 and refresh cookie cleared.
+POST {{baseUrl}}/auth/logout
+Origin: {{clientOrigin}}
 
 ###
 
@@ -86,49 +109,49 @@ GET {{baseUrl}}/users/me
 
 # Users - me with token
 GET {{baseUrl}}/users/me
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Movies - search valid query
 GET {{baseUrl}}/movies/search?query={{movieQuery}}
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Movies - search missing query
 # Expected: 400 VALIDATION_ERROR
 GET {{baseUrl}}/movies/search
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Movies - details valid id
 GET {{baseUrl}}/movies/{{movieId}}
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Movies - details invalid id
 # Expected: 400 VALIDATION_ERROR
 GET {{baseUrl}}/movies/abc
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Movies - credits valid id
 GET {{baseUrl}}/movies/{{movieId}}/credits
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Movies - credits invalid id
 # Expected: 400 VALIDATION_ERROR
 GET {{baseUrl}}/movies/abc/credits
-Authorization: Bearer {{login.response.body.token}}
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
 
 # Alternative protected request token source:
 # If you used "login existing local user", replace the Authorization token above with:
-# Authorization: Bearer {{loginExisting.response.body.token}}
+# Authorization: Bearer {{loginExisting.response.body.accessToken}}

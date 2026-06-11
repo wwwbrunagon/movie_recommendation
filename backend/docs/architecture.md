@@ -89,7 +89,7 @@ backend/
   - Instâncias com `camelCase`: `authController`, `userRepository`.
 - Funções e variáveis:
   - Use `camelCase` para funções e variáveis.
-  - Exemplo: `generateToken`, `authMiddleware`, `searchMoviesSchema`.
+  - Exemplo: `generateAccessToken`, `authMiddleware`, `searchMoviesSchema`.
 - Constantes exportadas:
   - Use `UPPER_SNAKE_CASE` para valores fixos ou erros.
   - Para objetos constantes utilitárias use `camelCase` com `as const` quando necessário.
@@ -135,10 +135,11 @@ Request -> Route -> Middleware -> Controller -> Service -> Repository/External A
 [AuthController] --> AuthService.register --> UserRepository.findByEmail
                                                    --> bcrypt.hash
                                                    --> UserRepository.create
-                                                   --> generateToken
+                                                   --> RefreshSessionRepository.create
+                                                   --> generateAccessToken
    |
    v
-[Response 201 { token, user }]
+[Response 201 { accessToken, user } + HttpOnly refresh cookie]
 ```
 
 ---
@@ -155,8 +156,9 @@ Request -> Route -> Middleware -> Controller -> Service -> Repository/External A
    - verifica se usuário já existe
    - criptografa senha com `bcrypt.hash(..., 10)`
    - cria usuário via `UserRepository.create`
-   - gera JWT com `generateToken(user.id)`
-5. retorna `201` com token e dados do usuário
+   - gera access token com `generateAccessToken(user.id)`
+   - cria refresh token opaco, salva apenas hash no banco e envia cookie HttpOnly
+5. retorna `201` com access token e dados do usuário
 
 ### Login
 
@@ -166,8 +168,15 @@ Request -> Route -> Middleware -> Controller -> Service -> Repository/External A
 4. `AuthService.login`
    - busca usuário por email
    - compara senha com `bcrypt.compare`
-   - gera token JWT
-5. retorna `200` com token e dados do usuário
+   - gera access token JWT
+   - cria refresh token opaco, salva apenas hash no banco e envia cookie HttpOnly
+5. retorna `200` com access token e dados do usuário
+
+### Refresh e logout
+
+- `POST /auth/refresh` valida o refresh token do cookie HttpOnly, revoga a sessao anterior, cria uma nova sessao e retorna novo `{ accessToken, user }`.
+- `POST /auth/logout` revoga a sessao atual e limpa o cookie.
+- Rotas de auth com cookie validam `Origin`/`Referer` contra `CLIENT_ORIGIN`.
 
 ### Protegendo rotas
 

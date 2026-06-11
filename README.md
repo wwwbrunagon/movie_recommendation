@@ -120,6 +120,7 @@ Create a `.env` file in the backend root directory:
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/movie_db"
 JWT_SECRET="your_secret_key"
+CLIENT_ORIGIN="http://localhost:5173"
 PORT=3000
 ```
 
@@ -202,6 +203,8 @@ You can view and edit database records directly from the browser.
 ```bash
 curl -X POST http://localhost:3000/auth/register \
 -H "Content-Type: application/json" \
+-H "Origin: http://localhost:5173" \
+-c cookies.txt \
 -d '{
   "name": "Bruna",
   "email": "bruna@email.com",
@@ -213,8 +216,12 @@ Expected response:
 
 ```json
 {
-	"id": "...",
-	"email": "bruna@email.com"
+	"accessToken": "eyJ...",
+	"user": {
+		"id": "...",
+		"name": "Bruna",
+		"email": "bruna@email.com"
+	}
 }
 ```
 
@@ -235,6 +242,8 @@ SELECT * FROM "User";
 ```bash
 curl -X POST http://localhost:3000/auth/login \
 -H "Content-Type: application/json" \
+-H "Origin: http://localhost:5173" \
+-c cookies.txt \
 -d '{
   "email": "bruna@email.com",
   "password": "123456"
@@ -245,11 +254,40 @@ Expected response:
 
 ```json
 {
-	"token": "eyJ..."
+	"accessToken": "eyJ...",
+	"user": {
+		"id": "...",
+		"name": "Bruna",
+		"email": "bruna@email.com"
+	}
 }
 ```
 
-Copy the JWT token for authenticated requests.
+Use `accessToken` for authenticated requests. The refresh token is stored as an HttpOnly cookie in `cookies.txt` for the curl examples.
+
+---
+
+#### Refresh Session
+
+```bash
+curl -X POST http://localhost:3000/auth/refresh \
+-H "Origin: http://localhost:5173" \
+-b cookies.txt \
+-c cookies.txt
+```
+
+Expected response:
+
+```json
+{
+	"accessToken": "eyJ...",
+	"user": {
+		"id": "...",
+		"name": "Bruna",
+		"email": "bruna@email.com"
+	}
+}
+```
 
 ---
 
@@ -259,7 +297,7 @@ Example:
 
 ```bash
 curl http://localhost:3000/users/me \
--H "Authorization: Bearer YOUR_JWT_TOKEN"
+-H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 Expected response:
@@ -270,6 +308,19 @@ Expected response:
 	"email": "bruna@email.com"
 }
 ```
+
+---
+
+#### Logout
+
+```bash
+curl -X POST http://localhost:3000/auth/logout \
+-H "Origin: http://localhost:5173" \
+-b cookies.txt \
+-c cookies.txt
+```
+
+Expected response: `204 No Content`.
 
 ---
 

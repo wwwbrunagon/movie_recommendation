@@ -106,13 +106,30 @@ sequenceDiagram
     H->>S: login/register
     S->>A: POST /auth/login ou /auth/register
     A->>B: Request HTTP
-    B-->>A: token + user
+    B-->>A: accessToken + user + refresh cookie
     A-->>S: response.data
     S-->>H: AuthResponse
     H-->>P: sucesso
-    P->>Z: login(token, user)
+    P->>Z: setSession(accessToken, user)
     P->>R: navigate("/")
 ```
+
+### Refresh De Sessao
+
+```mermaid
+sequenceDiagram
+    participant App as App bootstrap
+    participant A as Shared API
+    participant B as Backend
+    participant Z as Auth Store
+
+    App->>A: POST /auth/refresh com cookie HttpOnly
+    A->>B: Request com credentials
+    B-->>A: novo accessToken + user + cookie rotacionado
+    A-->>Z: setSession(accessToken, user)
+```
+
+O access token fica apenas em memoria. O refresh token e opaco, fica em cookie `HttpOnly`, e e usado para restaurar sessao no reload e renovar requests que retornarem `401`.
 
 ### Filmes
 

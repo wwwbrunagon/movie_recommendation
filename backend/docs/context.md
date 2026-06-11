@@ -62,7 +62,7 @@ Essa documentação descreve a arquitetura, o fluxo de dados, as responsabilidad
   - devolver resposta HTTP adequada
 
 - Os services contêm a lógica de negócio real:
-  - `AuthService` trata registro, login, hash de senha e geração de token.
+  - `AuthService` trata registro, login, hash de senha, access tokens e refresh sessions.
   - `TmdbService` encapsula chamadas ao TMDB com Axios.
 
 ### 5. Persistência e repositório
@@ -97,17 +97,17 @@ Essa documentação descreve a arquitetura, o fluxo de dados, as responsabilidad
 
 - `POST /auth/register`
   - Campos: `name`, `email`, `password`
-  - Fluxo: validação -> `AuthController.register` -> `AuthService.register` -> `UserRepository.create` -> gera token JWT
+  - Fluxo: validação -> `AuthController.register` -> `AuthService.register` -> `UserRepository.create` -> cria refresh session -> gera access token JWT
   - Respostas:
-    - `201` com `{ token, user }`
+    - `201` com `{ accessToken, user }` e cookie refresh HttpOnly
     - `409` se usuário já existe
     - `400` se dados inválidos
 
 - `POST /auth/login`
   - Campos: `email`, `password`
-  - Fluxo: validação -> `AuthController.login` -> `AuthService.login` -> verifica senha bcrypt -> gera token JWT
+  - Fluxo: validação -> `AuthController.login` -> `AuthService.login` -> verifica senha bcrypt -> cria refresh session -> gera access token JWT
   - Respostas:
-    - `200` com `{ token, user }`
+    - `200` com `{ accessToken, user }` e cookie refresh HttpOnly
     - `401` se credenciais inválidas
     - `400` se dados inválidos
 
@@ -166,9 +166,12 @@ Observações:
 
 ## Camada de autenticação
 
-### JWT
+### Access token e refresh token
 
-- A utilidade `generateToken` em `src/utils/jwt.ts` assina um token com `userId` e expiração de `7d`.
+- A utilidade `generateAccessToken` em `src/utils/jwt.ts` assina um access token curto com `userId`.
+- O refresh token e opaco, armazenado no browser como cookie `HttpOnly` e persistido no banco apenas como hash em `RefreshSession`.
+- `POST /auth/refresh` rotaciona a sessao de refresh e retorna novo `{ accessToken, user }`.
+- `POST /auth/logout` revoga a sessao atual e limpa o cookie.
 - O `JWT_SECRET` deve estar presente nas variáveis de ambiente.
 - O middleware valida o token e adiciona o identificador do usuário na requisição.
 
