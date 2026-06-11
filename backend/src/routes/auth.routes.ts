@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { AuthController } from '../controller/auth.controller';
 import { validate } from '../middlewares/validate.middleware';
+import { verifyOriginMiddleware } from '../middlewares/verify-origin.middleware';
 import { asyncHandler } from '../utils/async-handler';
 
 import {
@@ -11,6 +12,8 @@ import {
 
 const authRoutes = Router();
 const authController = new AuthController();
+
+authRoutes.use(verifyOriginMiddleware);
 
 authRoutes.post(
 	'/register',
@@ -23,5 +26,9 @@ authRoutes.post(
 	validate(loginSchema, 'body'),
 	asyncHandler(authController.login),
 );
+
+authRoutes.post('/refresh', asyncHandler(authController.refresh));
+
+authRoutes.post('/logout', asyncHandler(authController.logout));
 
 export { authRoutes };

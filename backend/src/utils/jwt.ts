@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { AppError } from './app-error';
+import { ACCESS_TOKEN_EXPIRES_IN } from '../constants/session';
 
-export function generateToken(userId: string) {
+export function generateAccessToken(userId: string) {
 	const jwtSecret = process.env.JWT_SECRET;
 
 	if (!jwtSecret) {
@@ -11,5 +12,5 @@ export function generateToken(userId: string) {
 		);
 	}
 
-	return jwt.sign({ userId }, jwtSecret, { expiresIn: '7d' });
+	return jwt.sign({ userId }, jwtSecret, { expiresIn: ACCESS_TOKEN_EXPIRES_IN });
 }
