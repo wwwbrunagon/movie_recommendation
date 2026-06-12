@@ -396,32 +396,5 @@ frontend/
     ├── layouts/
     └── App.tsx
 ```
-
 #
 
-#### Development order:
-
-- ✅ Setup Backend Express + TypeScript
-- ✅ PostgreSQL + Prisma
-  - Model User
-  - Register
-  - Login
-  - Bcrypt
-  - JWT
-  - Middleware de autenticação
-  - /users/me
-  - Error constants
-  - Zod Validators
-- ✅ Autenticação JWT
-- ✅ Integração com TMDB
-- Setup Frontend React + Vite
-- Login e Cadastro
-- Busca de Filmes
-- Página de Detalhes
-- Sistema de Avaliações
-- Favoritos
-- Watchlist
-- Sistema de Recomendação
-- Testes
-- Docker
-- Deploy Vercel
