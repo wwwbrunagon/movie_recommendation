@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
-import { prisma } from '../config/prisma';
+
+import { UserService } from '../services/user.service';
 import { AppError } from '../utils/app-error';
+
+const userService = new UserService();
 
 export class UserController {
 	async me(req: Request, res: Response): Promise<Response> {
@@ -10,22 +13,10 @@ export class UserController {
 			throw AppError.unauthorized();
 		}
 
-		const user = await prisma.user.findUnique({
-			where: {
-				id: userId,
-			},
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				createdAt: true,
-			},
-		});
-
-		if (!user) {
-			throw AppError.notFound('User not found', 'USER_NOT_FOUND');
-		}
+		const user = await userService.getProfile(userId);
 
 		return res.status(200).json(user);
 	}
 }
+
+//Controller recebe HTTP

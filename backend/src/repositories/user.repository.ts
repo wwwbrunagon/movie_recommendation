@@ -13,6 +13,18 @@ export class UserRepository {
 		});
 	}
 
+	async findProfileById(id: string) {
+		return prisma.user.findUnique({
+			where: { id },
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				createdAt: true,
+			},
+		});
+	}
+
 	async create(name: string, email: string, password: string) {
 		return prisma.user.create({
 			data: {
