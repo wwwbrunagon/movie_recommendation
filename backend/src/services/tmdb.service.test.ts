@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetAppConfigForTests } from '../config/app-config';
+
 const { getMock } = vi.hoisted(() => ({
 	getMock: vi.fn(),
 }));
@@ -17,7 +19,10 @@ import tmdbService from './tmdb.service';
 
 describe('tmdb.service', () => {
 	beforeEach(() => {
+		resetAppConfigForTests();
 		getMock.mockReset();
+		process.env.CLIENT_ORIGIN = 'http://localhost:5173';
+		process.env.JWT_SECRET = 'secret';
 		process.env.TMDB_BASE_URL = 'https://example.test';
 		process.env.TMDB_API_KEY = 'tmdb-key';
 	});
