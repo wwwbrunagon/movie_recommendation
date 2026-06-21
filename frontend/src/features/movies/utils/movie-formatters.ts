@@ -5,6 +5,6 @@ export function getMoviePosterUrl(path: string | null) {
 	return path ? `${IMAGE_BASE_URL}${path}` : FALLBACK_POSTER;
 }
 
-export function getReleaseYear(date: string) {
+export function getReleaseYear(date: string | null) {
 	return date ? date.slice(0, 4) : 'N/A';
 }

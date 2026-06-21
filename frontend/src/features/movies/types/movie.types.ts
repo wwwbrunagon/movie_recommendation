@@ -2,17 +2,22 @@ export interface MovieSearchItem {
 	id: number;
 	title: string;
 	overview: string;
-	poster_path: string | null;
-	backdrop_path: string | null;
-	release_date: string;
-	vote_average: number;
+	posterPath: string | null;
+	backdropPath: string | null;
+	releaseDate: string | null;
+	voteAverage: number;
+	voteCount: number;
+	popularity: number;
+	originalLanguage: string;
+	genreIds: number[];
+	adult: boolean;
 }
 
 export interface MovieSearchResponse {
 	page: number;
 	results: MovieSearchItem[];
-	total_pages: number;
-	total_results: number;
+	totalPages: number;
+	totalResults: number;
 }
 
 export interface MovieGenre {
@@ -24,19 +29,26 @@ export interface MovieDetails {
 	id: number;
 	title: string;
 	overview: string;
-	poster_path: string | null;
-	backdrop_path: string | null;
-	release_date: string;
+	posterPath: string | null;
+	backdropPath: string | null;
+	releaseDate: string | null;
 	runtime: number | null;
-	vote_average: number;
+	voteAverage: number;
+	voteCount: number;
+	popularity: number;
+	originalLanguage: string;
+	status: string;
+	tagline: string | null;
 	genres: MovieGenre[];
+	adult: boolean;
 }
 
 export interface MovieCastMember {
 	id: number;
 	name: string;
 	character: string;
-	profile_path: string | null;
+	profilePath: string | null;
+	order: number;
 }
 
 export interface MovieCreditsResponse {

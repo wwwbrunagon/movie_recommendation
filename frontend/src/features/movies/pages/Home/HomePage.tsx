@@ -12,7 +12,7 @@ import { getMoviePosterUrl, getReleaseYear } from '../../utils/movie-formatters'
 
 export function HomePage() {
 	const navigate = useNavigate();
-	const { user } = useAuth();
+	const { accessToken, user } = useAuth();
 	const clearSession = useAuthStore((state) => state.clearSession);
 	const { mutateAsync: logout, isPending: isLoggingOut } = useLogout();
 	const [searchInput, setSearchInput] = useState('');
@@ -122,12 +122,12 @@ export function HomePage() {
 
 							{searchResults && (
 								<span className="text-sm text-gray-500">
-									{searchResults.total_results} encontrados
+							{searchResults.totalResults} encontrados
 								</span>
 							)}
 						</div>
 
-						{searchError && (
+						{searchError && accessToken && (
 							<p className="text-sm text-red-500">
 								Nao foi possivel buscar filmes agora.
 							</p>
@@ -161,7 +161,7 @@ export function HomePage() {
 									}`}
 								>
 									<img
-										src={getMoviePosterUrl(movie.poster_path)}
+										src={getMoviePosterUrl(movie.posterPath)}
 										alt={movie.title}
 										className="h-24 w-16 rounded object-cover"
 									/>
@@ -170,8 +170,8 @@ export function HomePage() {
 										<div>
 											<h3 className="font-semibold">{movie.title}</h3>
 											<p className="text-sm text-gray-500">
-												{getReleaseYear(movie.release_date)} · Nota{' '}
-												{movie.vote_average.toFixed(1)}
+												{getReleaseYear(movie.releaseDate)} · Nota{' '}
+												{movie.voteAverage.toFixed(1)}
 											</p>
 										</div>
 
@@ -193,7 +193,7 @@ export function HomePage() {
 							</p>
 						)}
 
-						{(detailsError || creditsError) && (
+						{(detailsError || creditsError) && accessToken && (
 							<p className="text-sm text-red-500">
 								Nao foi possivel carregar os detalhes deste filme.
 							</p>
@@ -206,7 +206,7 @@ export function HomePage() {
 						{selectedMovie && !isLoadingDetails && (
 							<div className="space-y-5">
 								<img
-									src={getMoviePosterUrl(selectedMovie.poster_path)}
+									src={getMoviePosterUrl(selectedMovie.posterPath)}
 									alt={selectedMovie.title}
 									className="aspect-[2/3] w-full rounded-lg object-cover"
 								/>
@@ -215,9 +215,9 @@ export function HomePage() {
 									<div>
 										<h3 className="text-xl font-bold">{selectedMovie.title}</h3>
 										<p className="text-sm text-gray-500">
-											{getReleaseYear(selectedMovie.release_date)} ·{' '}
+											{getReleaseYear(selectedMovie.releaseDate)} ·{' '}
 											{selectedMovie.runtime ? `${selectedMovie.runtime} min` : 'Duracao N/A'} ·
-											{' '}Nota {selectedMovie.vote_average.toFixed(1)}
+											{' '}Nota {selectedMovie.voteAverage.toFixed(1)}
 										</p>
 									</div>
 
