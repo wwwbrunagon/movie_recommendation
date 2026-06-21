@@ -17,7 +17,7 @@ const authService = new AuthService();
 
 export class AuthController {
 	async register(req: Request, res: Response): Promise<Response> {
-		const input = req.body as RegisterUserInputDto;
+		const input = req.validated?.body as RegisterUserInputDto;
 		const result = await authService.register(input);
 
 		setRefreshTokenCookie(res, result.refreshToken);
@@ -26,7 +26,7 @@ export class AuthController {
 	}
 
 	async login(req: Request, res: Response): Promise<Response> {
-		const input = req.body as LoginUserInputDto;
+		const input = req.validated?.body as LoginUserInputDto;
 		const result = await authService.login(input);
 
 		setRefreshTokenCookie(res, result.refreshToken);

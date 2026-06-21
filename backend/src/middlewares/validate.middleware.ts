@@ -10,7 +10,10 @@ export const validate =
 			return next(result.error);
 		}
 
-		req[source] = result.data as Request[typeof source];
+		req.validated = {
+			...req.validated,
+			[source]: result.data,
+		};
 
 		next();
 	};
