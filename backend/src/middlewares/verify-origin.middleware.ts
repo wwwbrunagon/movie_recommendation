@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 
+import { getAppConfig } from '../config/app-config';
 import { AppError } from '../utils/app-error';
 
 function getRequestOrigin(req: Request) {
@@ -27,11 +28,7 @@ export function verifyOriginMiddleware(
 	_res: Response,
 	next: NextFunction,
 ) {
-	const clientOrigin = process.env.CLIENT_ORIGIN;
-
-	if (!clientOrigin) {
-		return next();
-	}
+	const { clientOrigin } = getAppConfig();
 
 	const requestOrigin = getRequestOrigin(req);
 
