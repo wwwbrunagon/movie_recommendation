@@ -1,4 +1,21 @@
 import axios from 'axios';
+import type {
+	MovieCreditsDto,
+	MovieDetailsDto,
+	MovieIdInputDto,
+	MovieSearchResponseDto,
+	SearchMoviesInputDto,
+} from '../modules/movie/movie.dto';
+import {
+	toMovieCreditsDto,
+	toMovieDetailsDto,
+	toMovieSearchResponseDto,
+} from '../modules/movie/movie.mapper';
+import type {
+	TmdbMovieCreditsResponse,
+	TmdbMovieDetailsResponse,
+	TmdbMovieSearchResponse,
+} from '../modules/movie/movie.external-types';
 import { AppError } from '../utils/app-error';
 
 const tmdbApi = axios.create();
@@ -39,40 +56,55 @@ class TmdbService {
 		throw error;
 	}
 
-	async searchMovies(query: string) {
+	async searchMovies({
+		query,
+	}: SearchMoviesInputDto): Promise<MovieSearchResponseDto> {
 		const config = this.getRequestConfig();
 
 		try {
-			const response = await tmdbApi.get('/search/movie', {
+			const response = await tmdbApi.get<TmdbMovieSearchResponse>(
+				'/search/movie',
+				{
 				...config,
 				params: { ...config.params, query },
-			});
+				},
+			);
 
-			return response.data;
+			return toMovieSearchResponseDto(response.data);
 		} catch (error) {
 			this.handleTmdbError(error);
 		}
 	}
 
-	async getMovieDetails(movieId: number) {
+	async getMovieDetails({
+		id: movieId,
+	}: MovieIdInputDto): Promise<MovieDetailsDto> {
 		const config = this.getRequestConfig();
 
 		try {
-			const response = await tmdbApi.get(`/movie/${movieId}`, config);
+			const response = await tmdbApi.get<TmdbMovieDetailsResponse>(
+				`/movie/${movieId}`,
+				config,
+			);
 
-			return response.data;
+			return toMovieDetailsDto(response.data);
 		} catch (error) {
 			this.handleTmdbError(error);
 		}
 	}
 
-	async getMovieCredits(movieId: number) {
+	async getMovieCredits({
+		id: movieId,
+	}: MovieIdInputDto): Promise<MovieCreditsDto> {
 		const config = this.getRequestConfig();
 
 		try {
-			const response = await tmdbApi.get(`/movie/${movieId}/credits`, config);
+			const response = await tmdbApi.get<TmdbMovieCreditsResponse>(
+				`/movie/${movieId}/credits`,
+				config,
+			);
 
-			return response.data;
+			return toMovieCreditsDto(response.data);
 		} catch (error) {
 			this.handleTmdbError(error);
 		}

@@ -1,5 +1,11 @@
 import bcrypt from 'bcrypt';
 
+import type {
+	AuthSessionResultDto,
+	LoginUserInputDto,
+	RegisterUserInputDto,
+} from '../modules/auth/auth.dto';
+import { toAuthenticatedUserDto } from '../modules/auth/auth.mapper';
 import { UserRepository } from '../repositories/user.repository';
 import { RefreshSessionRepository } from '../repositories/refresh-session.repository';
 import { generateAccessToken } from '../utils/jwt';
@@ -11,27 +17,15 @@ import {
 	hashRefreshToken,
 } from '../utils/refresh-token';
 
-interface SessionUser {
-	id: string;
-	name: string;
-	email: string;
-}
-
-interface AuthSessionResult {
-	accessToken: string;
-	refreshToken: string;
-	user: SessionUser;
-}
-
 export class AuthService {
 	private userRepository = new UserRepository();
 	private refreshSessionRepository = new RefreshSessionRepository();
 
-	async register(
-		name: string,
-		email: string,
-		password: string,
-	): Promise<AuthSessionResult> {
+	async register({
+		name,
+		email,
+		password,
+	}: RegisterUserInputDto): Promise<AuthSessionResultDto> {
 		const userExists = await this.userRepository.findByEmail(email);
 
 		if (userExists) {
@@ -51,7 +45,10 @@ export class AuthService {
 		});
 	}
 
-	async login(email: string, password: string): Promise<AuthSessionResult> {
+	async login({
+		email,
+		password,
+	}: LoginUserInputDto): Promise<AuthSessionResultDto> {
 		const user = await this.userRepository.findByEmail(email);
 
 		if (!user) {
@@ -77,7 +74,7 @@ export class AuthService {
 		});
 	}
 
-	async refresh(refreshToken: string): Promise<AuthSessionResult> {
+	async refresh(refreshToken: string): Promise<AuthSessionResultDto> {
 		const tokenHash = hashRefreshToken(refreshToken);
 		const session =
 			await this.refreshSessionRepository.findValidByTokenHash(tokenHash);
@@ -105,7 +102,11 @@ export class AuthService {
 		}
 	}
 
-	private async createAuthSession(user: SessionUser): Promise<AuthSessionResult> {
+	private async createAuthSession(user: {
+		id: string;
+		name: string;
+		email: string;
+	}): Promise<AuthSessionResultDto> {
 		const refreshToken = generateRefreshToken();
 		const tokenHash = hashRefreshToken(refreshToken);
 		const expiresAt = getRefreshTokenExpiresAt();
@@ -115,7 +116,7 @@ export class AuthService {
 		return {
 			accessToken: generateAccessToken(user.id),
 			refreshToken,
-			user,
+			user: toAuthenticatedUserDto(user),
 		};
 	}
 }

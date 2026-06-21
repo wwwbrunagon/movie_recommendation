@@ -1,5 +1,10 @@
 import { Request, Response } from 'express';
 
+import {
+	type LoginUserInputDto,
+	type RegisterUserInputDto,
+} from '../modules/auth/auth.dto';
+import { toAuthSessionResponseDto } from '../modules/auth/auth.mapper';
 import { AuthService } from '../services/auth.service';
 import { REFRESH_TOKEN_COOKIE_NAME } from '../constants/session';
 import {
@@ -12,23 +17,21 @@ const authService = new AuthService();
 
 export class AuthController {
 	async register(req: Request, res: Response): Promise<Response> {
-		const { name, email, password } = req.body;
-		const result = await authService.register(name, email, password);
-		const { refreshToken, ...responseBody } = result;
+		const input = req.body as RegisterUserInputDto;
+		const result = await authService.register(input);
 
-		setRefreshTokenCookie(res, refreshToken);
+		setRefreshTokenCookie(res, result.refreshToken);
 
-		return res.status(201).json(responseBody);
+		return res.status(201).json(toAuthSessionResponseDto(result));
 	}
 
 	async login(req: Request, res: Response): Promise<Response> {
-		const { email, password } = req.body;
-		const result = await authService.login(email, password);
-		const { refreshToken, ...responseBody } = result;
+		const input = req.body as LoginUserInputDto;
+		const result = await authService.login(input);
 
-		setRefreshTokenCookie(res, refreshToken);
+		setRefreshTokenCookie(res, result.refreshToken);
 
-		return res.status(200).json(responseBody);
+		return res.status(200).json(toAuthSessionResponseDto(result));
 	}
 
 	async refresh(req: Request, res: Response): Promise<Response> {
@@ -42,11 +45,10 @@ export class AuthController {
 		}
 
 		const result = await authService.refresh(refreshToken);
-		const { refreshToken: nextRefreshToken, ...responseBody } = result;
 
-		setRefreshTokenCookie(res, nextRefreshToken);
+		setRefreshTokenCookie(res, result.refreshToken);
 
-		return res.status(200).json(responseBody);
+		return res.status(200).json(toAuthSessionResponseDto(result));
 	}
 
 	async logout(req: Request, res: Response): Promise<Response> {

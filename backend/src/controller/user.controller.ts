@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 
+import type { UserProfileDto } from '../modules/user/user.dto';
 import { UserService } from '../services/user.service';
 import { AppError } from '../utils/app-error';
 
@@ -13,7 +14,7 @@ export class UserController {
 			throw AppError.unauthorized();
 		}
 
-		const user = await userService.getProfile(userId);
+		const user: UserProfileDto = await userService.getProfile(userId);
 
 		return res.status(200).json(user);
 	}

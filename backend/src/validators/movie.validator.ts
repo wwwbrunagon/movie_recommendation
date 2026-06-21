@@ -5,5 +5,8 @@ export const searchMoviesSchema = z.object({
 });
 
 export const movieIdSchema = z.object({
-	id: z.string().regex(/^\d+$/, 'Movie id must be numeric'),
+	id: z.coerce.number().int().positive('Movie id must be greater than zero'),
 });
+
+export type SearchMoviesInput = z.infer<typeof searchMoviesSchema>;
+export type MovieIdInput = z.infer<typeof movieIdSchema>;
