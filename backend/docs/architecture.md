@@ -2,13 +2,33 @@
 
 ## Objetivo
 
-Este documento descreve a arquitetura do backend, padrões de nomeação, estrutura de pastas e fluxos principais. Ele serve como referência para novos desenvolvedores e para a implementação de futuras features.
+Este documento descreve a arquitetura atual do backend com base no código implementado hoje. Ele cobre estrutura de pastas, responsabilidades por camada, fluxos principais, decisões de autenticação e pontos de extensão.
+
+---
+
+## Stack atual
+
+- Node.js + TypeScript
+- Express 5
+- Prisma + PostgreSQL
+- Zod para validação
+- JWT para access token
+- Refresh token opaco persistido no banco
+- Axios para integração com TMDB
+
+Scripts principais em `backend/package.json`:
+
+- `npm run dev`: desenvolvimento com `tsx watch`
+- `npm run build`: build TypeScript
+- `npm run start`: executa `dist/server.js`
+- `npm run prisma:migrate`: cria/aplica migrations
+- `npm run prisma:generate`: gera cliente Prisma
 
 ---
 
 ## Estrutura de pastas
 
-```
+```text
 backend/
   src/
     app.ts
@@ -19,6 +39,7 @@ backend/
       auth-errors.ts
       auth-messages.ts
       movie-errors.ts
+      session.ts
       user-errors.ts
     controller/
       auth.controller.ts
@@ -26,8 +47,11 @@ backend/
       user.controller.ts
     middlewares/
       auth.middleware.ts
+      error.middleware.ts
       validate.middleware.ts
+      verify-origin.middleware.ts
     repositories/
+      refresh-session.repository.ts
       user.repository.ts
     routes/
       auth.routes.ts
@@ -37,13 +61,20 @@ backend/
     services/
       auth.service.ts
       tmdb.service.ts
+      user.service.ts
     types/
       express.d.ts
     utils/
+      app-error.ts
+      async-handler.ts
+      auth-cookie.ts
       jwt.ts
+      logger.ts
+      refresh-token.ts
     validators/
       auth.validator.ts
       movie.validator.ts
+      user.validator.ts
   prisma/
     schema.prisma
     migrations/
@@ -52,222 +83,564 @@ backend/
     context.md
 ```
 
-### Descrição das camadas
-
-- `src/app.ts`
-  - Configura o Express e monta middlewares e rotas.
-- `src/server.ts`
-  - Inicializa o servidor usando `app` e carrega `dotenv`.
-- `src/config/prisma.ts`
-  - Cria e exporta a instância `PrismaClient`.
-- `src/constants/`
-  - Armazena strings e códigos de erro reutilizáveis.
-- `src/routes/`
-  - Define endpoints e associa middlewares/validadores.
-- `src/controller/`
-  - Processa requisições, trata erros e chama services.
-- `src/services/`
-  - Contém lógica de negócio e integrações externas.
-- `src/repositories/`
-  - Faz persistência no banco e abstrai Prisma.
-- `src/middlewares/`
-  - Contém validação de request e proteção por token.
-- `src/validators/`
-  - Define schemas Zod para request body, params e query.
-- `src/utils/`
-  - Utilitários gerais como geração de JWT.
-
 ---
 
-## Padrões de naming
+## Visão de alto nível
 
-- Arquivos:
-  - Use `kebab-case` para arquivos e pastas.
-  - Exemplo: `auth.controller.ts`, `movie.routes.ts`.
-- Classes e instâncias:
-  - Classes com `PascalCase` e sufixo claro: `AuthController`, `TmdbService`, `UserRepository`.
-  - Instâncias com `camelCase`: `authController`, `userRepository`.
-- Funções e variáveis:
-  - Use `camelCase` para funções e variáveis.
-  - Exemplo: `generateAccessToken`, `authMiddleware`, `searchMoviesSchema`.
-- Constantes exportadas:
-  - Use `UPPER_SNAKE_CASE` para valores fixos ou erros.
-  - Para objetos constantes utilitárias use `camelCase` com `as const` quando necessário.
-
-### Convenções específicas
-
-- Controllers:
-  - nome final `Controller`, por exemplo `UserController`.
-  - métodos devem refletir ações do endpoint: `register`, `login`, `me`, `searchMovies`.
-- Services:
-  - nome final `Service`, por exemplo `AuthService`.
-  - expor métodos que representam casos de uso de negócio.
-- Repositories:
-  - nome final `Repository` e foco exclusivo em acesso a dados.
-- Middlewares:
-  - nome final `middleware` e exportado como função.
-- Rotas:
-  - cada arquivo define um `Router` e exporta padrão ou nomeado.
-  - endpoints devem ser curtos e sem lógica de negócio.
-
----
-
-## Fluxo de requisição
-
-### Visão geral do fluxo
+Fluxo padrão de uma request:
 
 ```text
-Request -> Route -> Middleware -> Controller -> Service -> Repository/External API -> Controller -> Response
+Request
+  -> Route
+  -> Middleware(s)
+  -> Controller
+  -> Service
+  -> Repository / External API
+  -> Controller
+  -> Response
 ```
 
-### Diagrama detalhado
+Separação atual:
 
-```text
-[Client]
-   |
-   | HTTP request
-   v
-[Express app] -- app.use('/auth', authRoutes)
-   |
-   v
-[authRoutes] --- validate(registerSchema) ---> [AuthController.register]
-
-[AuthController] --> AuthService.register --> UserRepository.findByEmail
-                                                   --> bcrypt.hash
-                                                   --> UserRepository.create
-                                                   --> RefreshSessionRepository.create
-                                                   --> generateAccessToken
-   |
-   v
-[Response 201 { accessToken, user } + HttpOnly refresh cookie]
-```
+- `routes`: define endpoints e encadeamento de middlewares.
+- `middlewares`: autenticação, validação, verificação de origem e tratamento global de erros.
+- `controller`: traduz HTTP para chamadas de serviço e monta resposta.
+- `services`: concentra regra de negócio.
+- `repositories`: acesso ao banco via Prisma.
+- `utils`: infraestrutura compartilhada de autenticação, erro, logging e helpers.
 
 ---
 
-## Fluxo de autenticação
+## Bootstrap da aplicação
 
-### Registro
+### `src/app.ts`
 
-1. `POST /auth/register`
-2. `validate(registerSchema, 'body')`
+Responsável por montar a aplicação Express:
+
+- configura `cors` com `origin: process.env.CLIENT_ORIGIN`
+- habilita `credentials: true`
+- registra `express.json()`
+- registra `cookie-parser`
+- monta rotas:
+  - `/health`
+  - `/auth`
+  - `/users`
+  - `/movies`
+- registra `errorMiddleware` por último
+
+### `src/server.ts`
+
+Responsável pelo ciclo de vida do processo:
+
+- carrega variáveis com `import 'dotenv/config'`
+- sobe servidor HTTP na porta `process.env.PORT || 3000`
+- trata `server.on('error')`
+- trata `uncaughtException`
+- trata `unhandledRejection`
+- implementa graceful shutdown em `SIGTERM`
+- usa `logError` e `AppError` em falhas de encerramento
+
+Esse arquivo já vai além de um bootstrap mínimo: ele também concentra política de encerramento seguro do processo.
+
+---
+
+## Camadas e responsabilidades
+
+### Routes
+
+Arquivos atuais:
+
+- `auth.routes.ts`
+- `health.routes.ts`
+- `movie.routes.ts`
+- `user.routes.ts`
+
+Responsabilidades:
+
+- declarar endpoints
+- aplicar middlewares
+- aplicar validação
+- envolver handlers com `asyncHandler`
+
+As rotas não contêm regra de negócio.
+
+### Controllers
+
+Arquivos atuais:
+
+- `AuthController`
+- `MovieController`
+- `UserController`
+
+Responsabilidades:
+
+- ler dados de `req.body`, `req.params`, `req.query`, `req.cookies`
+- chamar services
+- lançar `AppError` quando faltar contexto HTTP obrigatório
+- montar resposta HTTP
+
+Exemplos:
+
+- `AuthController.register/login` definem cookie HttpOnly de refresh token
+- `AuthController.refresh/logout` leem cookie atual
+- `UserController.me` depende de `req.user.userId`
+- `MovieController` apenas converte/parsa inputs e delega ao TMDB service
+
+### Services
+
+Arquivos atuais:
+
+- `auth.service.ts`
+- `tmdb.service.ts`
+- `user.service.ts`
+
+Responsabilidades:
+
+- concentrar regra de negócio
+- orquestrar repositórios
+- encapsular integração externa
+- lançar erros de domínio/operação via `AppError`
+
+Casos atuais:
+
+- `AuthService`
+  - registro
+  - login
+  - refresh session rotation
+  - logout
+  - geração de access token
+  - criação de refresh session persistida
+- `UserService`
+  - busca perfil do usuário autenticado
+- `TmdbService`
+  - busca filmes
+  - detalhes
+  - créditos
+  - tradução de falhas Axios para `AppError`
+
+### Repositories
+
+Arquivos atuais:
+
+- `user.repository.ts`
+- `refresh-session.repository.ts`
+
+Responsabilidades:
+
+- isolar acesso ao Prisma
+- expor operações de persistência por agregado
+
+Casos atuais:
+
+- `UserRepository`
+  - `findByEmail`
+  - `findById`
+  - `findProfileById`
+  - `create`
+- `RefreshSessionRepository`
+  - `create`
+  - `findValidByTokenHash`
+  - `revoke`
+
+### Middlewares
+
+Arquivos atuais:
+
+- `auth.middleware.ts`
+- `validate.middleware.ts`
+- `verify-origin.middleware.ts`
+- `error.middleware.ts`
+
+Responsabilidades:
+
+- autenticar requests
+- validar payload/params/query
+- bloquear origens inválidas em rotas sensíveis a cookie
+- padronizar resposta de erro
+
+---
+
+## Fluxos principais
+
+## 1. Registro
+
+Endpoint: `POST /auth/register`
+
+Fluxo:
+
+1. `validate(registerSchema, 'body')`
+2. `verifyOriginMiddleware`
 3. `AuthController.register`
-   - valida manual de `name`, `email`, `password`
 4. `AuthService.register`
-   - verifica se usuário já existe
-   - criptografa senha com `bcrypt.hash(..., 10)`
-   - cria usuário via `UserRepository.create`
-   - gera access token com `generateAccessToken(user.id)`
-   - cria refresh token opaco, salva apenas hash no banco e envia cookie HttpOnly
-5. retorna `201` com access token e dados do usuário
+5. `UserRepository.findByEmail`
+6. `bcrypt.hash(password, 10)`
+7. `UserRepository.create`
+8. `RefreshSessionRepository.create`
+9. `generateAccessToken(user.id)`
+10. `setRefreshTokenCookie(res, refreshToken)`
+11. resposta `201`
 
-### Login
+Resposta:
 
-1. `POST /auth/login`
-2. `validate(loginSchema, 'body')`
+```json
+{
+  "accessToken": "...",
+  "user": {
+    "id": "...",
+    "name": "...",
+    "email": "..."
+  }
+}
+```
+
+O refresh token não vai no body. Ele é enviado apenas por cookie HttpOnly.
+
+## 2. Login
+
+Endpoint: `POST /auth/login`
+
+Fluxo:
+
+1. `validate(loginSchema, 'body')`
+2. `verifyOriginMiddleware`
 3. `AuthController.login`
 4. `AuthService.login`
-   - busca usuário por email
-   - compara senha com `bcrypt.compare`
-   - gera access token JWT
-   - cria refresh token opaco, salva apenas hash no banco e envia cookie HttpOnly
-5. retorna `200` com access token e dados do usuário
+5. `UserRepository.findByEmail`
+6. `bcrypt.compare(password, user.password)`
+7. `RefreshSessionRepository.create`
+8. `generateAccessToken`
+9. `setRefreshTokenCookie`
+10. resposta `200`
 
-### Refresh e logout
+## 3. Refresh de sessão
 
-- `POST /auth/refresh` valida o refresh token do cookie HttpOnly, revoga a sessao anterior, cria uma nova sessao e retorna novo `{ accessToken, user }`.
-- `POST /auth/logout` revoga a sessao atual e limpa o cookie.
-- Rotas de auth com cookie validam `Origin`/`Referer` contra `CLIENT_ORIGIN`.
+Endpoint: `POST /auth/refresh`
 
-### Protegendo rotas
+Fluxo:
 
-- `authMiddleware` valida cabeçalho `Authorization: Bearer <token>`.
-- verificação de `JWT_SECRET` em ambiente.
-- usa `jwt.verify` para extrair `userId`.
-- adiciona `req.user = { userId }`.
-- se inválido, retorna `401`.
+1. `verifyOriginMiddleware`
+2. `AuthController.refresh`
+3. lê cookie `refreshToken`
+4. `AuthService.refresh`
+5. `hashRefreshToken(refreshToken)`
+6. `RefreshSessionRepository.findValidByTokenHash`
+7. revoga a sessão atual
+8. cria nova sessão
+9. gera novo access token
+10. sobrescreve cookie de refresh
+11. resposta `200`
 
----
+Comportamento importante:
 
-## Fluxo de integração com TMDB
+- o backend usa rotação de refresh token
+- apenas o hash do refresh token é salvo no banco
+- sessão inválida, expirada ou revogada retorna `401`
 
-### Busca de filmes
+## 4. Logout
 
-1. `GET /movies/search?query=<texto>`
-2. `authMiddleware`
-3. `validate(searchMoviesSchema, 'query')`
-4. `MovieController.searchMovies`
-5. `TmdbService.searchMovies(query)`
-6. Axios chama `TMDB_BASE_URL/search/movie` com `api_key` e `language`
-7. responde com payload do TMDB
+Endpoint: `POST /auth/logout`
 
-### Detalhes de filme
+Fluxo:
 
-1. `GET /movies/:id`
-2. `authMiddleware`
-3. `validate(movieIdSchema, 'params')`
-4. `MovieController.getMovieDetails`
-5. `TmdbService.getMovieDetails(movieId)`
-6. retorna dados do TMDB
+1. `verifyOriginMiddleware`
+2. `AuthController.logout`
+3. se houver cookie, tenta localizar sessão
+4. revoga sessão encontrada
+5. limpa cookie com `clearRefreshTokenCookie`
+6. resposta `204`
 
-### Créditos de filme
+## 5. Perfil do usuário autenticado
 
-1. `GET /movies/:id/credits`
-2. `authMiddleware`
-3. `validate(movieIdSchema, 'params')`
-4. `MovieController.getMovieCredits`
-5. `TmdbService.getMovieCredits(movieId)`
-6. retorna dados do TMDB
+Endpoint: `GET /users/me`
 
----
+Fluxo:
 
-## Guia de patterns e boas práticas
+1. `authMiddleware`
+2. `UserController.me`
+3. lê `req.user.userId`
+4. `UserService.getProfile`
+5. `UserRepository.findProfileById`
+6. resposta `200`
 
-### Separe responsabilidades
+## 6. Busca e detalhes de filmes
 
-- Controllers não devem acessar banco diretamente.
-- Services não devem manipular objetos `req`/`res`.
-- Repositories devem ser a única camada que fala com Prisma.
+Endpoints:
 
-### Tratamento de erro
+- `GET /movies/search`
+- `GET /movies/:id`
+- `GET /movies/:id/credits`
 
-- Controllers devem deixar erros subirem para o middleware global.
-- Use `AppError` para erros operacionais conhecidos.
-- Use `asyncHandler` nas rotas para encaminhar falhas async ao `errorMiddleware`.
-- O `errorMiddleware` centraliza status HTTP, formato da resposta e logging.
+Fluxo:
 
-### Novas features
-
-- Adicione novos módulos seguindo a mesma hierarquia:
-  - `routes/`
-  - `controller/`
-  - `services/`
-  - `repositories/` (quando precisar de banco)
-- Reutilize `validate` e `authMiddleware` sempre que possível.
-- Crie constantes de erro e mensagens em `src/constants/`.
-
-### Naming e organização
-
-- Não use abreviações inseguras em nomes de arquivos.
-- Prefira nomes explícitos: `userController.ts`, `tmdb.service.ts`.
-- Para middleware, nomeie com sufixo `.middleware.ts`.
-- Para validators, use `*.validator.ts`.
+1. `authMiddleware`
+2. `validate(...)`
+3. `MovieController`
+4. `TmdbService`
+5. chamada Axios ao TMDB
+6. resposta `200`
 
 ---
 
-## Recomendações para evolução
+## Autenticação e sessão
 
-- Adicionar `src/middlewares/error.middleware.ts` para tratamento global de erros.
-- Criar `src/services/user.service.ts` se houver mais lógica de usuário além de `me`.
-- Separar cliente TMDB em `src/clients/tmdb.client.ts` se novas integrações surgirem.
-- Adicionar testes unitários/mocks para services, controllers e middlewares.
-- Implementar logs estruturados e monitoramento de métricas.
+### Access token
+
+- formato: JWT
+- payload usado hoje: `{ userId }`
+- geração em `src/utils/jwt.ts`
+- expiração configurada em `ACCESS_TOKEN_EXPIRES_IN = '15m'`
+
+Uso:
+
+- enviado pelo cliente em `Authorization: Bearer <token>`
+- validado em `authMiddleware`
+- resultado anexado em `req.user`
+
+### Refresh token
+
+- gerado por `crypto.randomBytes(64).toString('hex')`
+- persistido apenas como hash SHA-256
+- TTL configurado em `REFRESH_TOKEN_TTL_DAYS = 7`
+- armazenado em cookie:
+  - `httpOnly: true`
+  - `sameSite: 'lax'`
+  - `path: '/auth'`
+  - `secure` apenas em produção
+
+### Verificação de origem
+
+`verifyOriginMiddleware` protege as rotas de auth baseadas em cookie:
+
+- compara `Origin` ou `Referer` com `CLIENT_ORIGIN`
+- quando `CLIENT_ORIGIN` não está configurado, o middleware não bloqueia
+- quando a origem difere, retorna `403 INVALID_ORIGIN`
+
+---
+
+## Validação
+
+Validação centralizada com Zod:
+
+- `auth.validator.ts`
+  - `registerSchema`
+  - `loginSchema`
+- `movie.validator.ts`
+  - `searchMoviesSchema`
+  - `movieIdSchema`
+- `user.validator.ts`
+  - schemas de atualização e troca de senha já existem, mas ainda não estão conectados a rotas
+
+`validate.middleware.ts`:
+
+- recebe um `ZodObject`
+- valida `body`, `params` ou `query`
+- em caso de falha, delega o `ZodError` ao `errorMiddleware`
+
+Observação relevante: hoje o middleware valida, mas não substitui `req[source]` pelo valor parseado/sanitizado. O código só usa o resultado para aprovar ou reprovar a request.
+
+---
+
+## Tratamento de erro
+
+### `AppError`
+
+Classe base para erros operacionais da aplicação:
+
+- `badRequest`
+- `unauthorized`
+- `forbidden`
+- `notFound`
+- `conflict`
+- `unprocessableEntity`
+- `internalServerError`
+- `serviceUnavailable`
+
+### `errorMiddleware`
+
+Centraliza resposta de erro para:
+
+- `AppError`
+- `ZodError`
+- erros do Prisma
+- `Error` genérico
+- erros desconhecidos
+
+Formato padrão de resposta:
+
+```json
+{
+  "success": false,
+  "message": "Validation error",
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "field": ["message"]
+  }
+}
+```
+
+Mapeamentos implementados:
+
+- `P2025` -> `404`
+- `P2002` -> `409`
+- `P2014` -> `400`
+- `P2003` -> `400`
+- `P2013` -> `400`
+
+### Logging
+
+`src/utils/logger.ts` registra:
+
+- timestamp
+- tipo do erro
+- status/code quando disponível
+- contexto como endpoint e userId
+- stack trace
+
+Observação importante: existe uma função `sanitizeError`, mas ela não é usada hoje dentro de `logError`. Portanto, a sanitização está prevista no arquivo, mas não está efetivamente integrada ao fluxo atual de logging.
+
+---
+
+## Modelo de dados atual
+
+Arquivo: `backend/prisma/schema.prisma`
+
+### `User`
+
+- `id`
+- `name`
+- `email` único
+- `password`
+- `createdAt`
+- `updatedAt`
+- relação com `refreshSessions`
+
+### `RefreshSession`
+
+- `id`
+- `userId`
+- `tokenHash` único
+- `expiresAt`
+- `revokedAt`
+- `createdAt`
+- `updatedAt`
+
+Regras importantes do modelo:
+
+- um usuário pode ter várias refresh sessions
+- logout e refresh revogam sessão por `revokedAt`
+- a busca de sessão válida exige:
+  - `tokenHash` correspondente
+  - `revokedAt = null`
+  - `expiresAt > now`
+
+---
+
+## Endpoints atuais
+
+### Health
+
+- `GET /health`
+
+Resposta:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Auth
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+
+### Users
+
+- `GET /users/me`
+
+### Movies
+
+- `GET /movies/search?query=<texto>`
+- `GET /movies/:id`
+- `GET /movies/:id/credits`
+
+---
+
+## Convenções do projeto
+
+### Naming
+
+- arquivos em `kebab-case` com sufixos por papel:
+  - `*.controller.ts`
+  - `*.service.ts`
+  - `*.repository.ts`
+  - `*.middleware.ts`
+  - `*.validator.ts`
+- classes em `PascalCase`
+- funções e variáveis em `camelCase`
+- constantes exportadas em `UPPER_SNAKE_CASE` quando representam valores fixos
+
+### Organização
+
+- controller não acessa banco diretamente
+- service não depende de `req`/`res`
+- repository fala com Prisma
+- rota só compõe pipeline
+- erro operacional conhecido deve usar `AppError`
+- handlers assíncronos devem ser envolvidos por `asyncHandler`
+
+---
+
+## Lacunas e status real do projeto
+
+Pontos já implementados:
+
+- autenticação com access token + refresh token
+- persistência de refresh sessions
+- proteção de rotas privadas
+- integração com TMDB
+- middleware global de erros
+- graceful shutdown básico
+
+Pontos parcialmente preparados ou ainda não conectados:
+
+- `user.validator.ts` existe, mas não há rotas de update profile / change password
+- `auth-errors.ts`, `movie-errors.ts` e `user-errors.ts` existem, mas o projeto ainda usa códigos hardcoded em vários `AppError`
+- `sanitizeError` existe no logger, mas não participa do logging efetivo
+
+Pontos de atenção técnicos:
+
+- `TmdbService` retorna payload bruto do TMDB; não existe camada de normalização
+- `validate.middleware.ts` não reaproveita o valor parseado pelo Zod
+- `health.routes.ts` está funcional, mas fora do padrão de formatação predominante do restante do backend
+
+---
+
+## Recomendações de evolução
+
+Próximos passos coerentes com a arquitetura atual:
+
+1. Conectar rotas de atualização de perfil e troca de senha usando `user.validator.ts`.
+2. Centralizar códigos de erro para reduzir strings hardcoded nos services/controllers.
+3. Aplicar sanitização real no logger antes de persistir ou imprimir contexto sensível.
+4. Considerar extração de um client TMDB dedicado se a integração crescer.
+5. Adicionar testes para:
+   - `AuthService`
+   - `authMiddleware`
+   - `errorMiddleware`
+   - `verifyOriginMiddleware`
+6. Avaliar invalidação global de sessões por usuário, se necessário para segurança operacional.
 
 ---
 
 ## Resumo
 
-Este backend segue um padrão clássico de camadas:
+O backend atual segue um desenho de camadas claro:
 
-- Roteamento → Middleware → Controller → Service → Repository/Client
+```text
+Route -> Middleware -> Controller -> Service -> Repository/External API
+```
 
-Manter essa separação e as convenções de naming garante facilidade de manutenção, testes e escalabilidade.
+O estado real do projeto já inclui autenticação completa com rotação de refresh token, integração com TMDB, tratamento global de erros e persistência via Prisma. O principal trabalho restante não é estrutural; é consolidar consistência, cobertura e evolução de endpoints já antecipados pelo código.
