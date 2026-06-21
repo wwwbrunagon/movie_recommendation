@@ -14,6 +14,11 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 	_retry?: boolean;
 }
 
+interface ApiErrorPayload {
+	code?: string;
+	message?: string;
+}
+
 const baseURL = import.meta.env.VITE_API_URL;
 
 export const api = axios.create({
@@ -46,6 +51,10 @@ async function refreshAccessToken() {
 	return refreshPromise;
 }
 
+function getErrorCode(error: AxiosError<ApiErrorPayload>) {
+	return error.response?.data?.code;
+}
+
 api.interceptors.request.use((config) => {
 	const token = getAccessToken();
 
@@ -60,15 +69,16 @@ api.interceptors.response.use(
 	(response) => response,
 
 	async (error: AxiosError) => {
-		const originalRequest = error.config as RetriableRequestConfig | undefined;
+		const axiosError = error as AxiosError<ApiErrorPayload>;
+		const originalRequest = axiosError.config as RetriableRequestConfig | undefined;
 
 		if (
-			error.response?.status !== 401 ||
+			axiosError.response?.status !== 401 ||
 			!originalRequest ||
 			originalRequest._retry ||
 			isAuthEndpoint(originalRequest.url)
 		) {
-			return Promise.reject(error);
+			return Promise.reject(axiosError);
 		}
 
 		originalRequest._retry = true;
@@ -79,10 +89,19 @@ api.interceptors.response.use(
 			originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
 			return api(originalRequest);
-		} catch {
+		} catch (refreshError) {
+			const refreshAxiosError = refreshError as AxiosError<ApiErrorPayload>;
+			const refreshErrorCode = getErrorCode(refreshAxiosError);
+
+			if (refreshErrorCode === 'REFRESH_TOKEN_NOT_PROVIDED') {
+				console.info(
+					'[auth] Refresh skipped: browser did not send a refresh cookie for localhost session',
+				);
+			}
+
 			clearAuthSession();
 
-			return Promise.reject(error);
+			return Promise.reject(axiosError);
 		}
 	},
 );

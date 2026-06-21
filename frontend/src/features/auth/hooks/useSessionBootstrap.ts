@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isAxiosError } from 'axios';
 
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
@@ -11,7 +12,7 @@ export function useSessionBootstrap() {
 	useEffect(() => {
 		let isMounted = true;
 
-		localStorage.removeItem('auth-storage');
+		window.localStorage?.removeItem?.('auth-storage');
 
 		async function bootstrapSession() {
 			try {
@@ -20,7 +21,20 @@ export function useSessionBootstrap() {
 				if (isMounted) {
 					setSession(response.accessToken, response.user);
 				}
-			} catch {
+			} catch (error) {
+				if (
+					isAxiosError(error) &&
+					error.response?.status === 401 &&
+					error.response.data &&
+					typeof error.response.data === 'object' &&
+					'code' in error.response.data &&
+					error.response.data.code === 'REFRESH_TOKEN_NOT_PROVIDED'
+				) {
+					console.info(
+						'[auth] Session bootstrap skipped: refresh cookie not available for localhost session',
+					);
+				}
+
 				if (isMounted) {
 					clearSession();
 				}
