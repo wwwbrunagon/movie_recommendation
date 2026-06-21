@@ -115,7 +115,7 @@ Authorization: Bearer {{login.response.body.accessToken}}
 
 # Movies - search valid query
 # Precondition: the backend must have started with valid TMDB_* env vars.
-GET {{baseUrl}}/movies/search?query=batmam
+GET {{baseUrl}}/movies/search?query=batman
 Authorization: Bearer {{login.response.body.accessToken}}
 
 ###
