@@ -7,7 +7,7 @@ O backend do projeto `movie_recommendation` é uma API REST em Node.js com TypeS
 - autenticação de usuários com PostgreSQL e Prisma;
 - integração com a API do TMDB para busca de filmes, detalhes e créditos.
 
-O backend já possui uma base sólida de autenticação com access token JWT e refresh token persistido em sessão, além de validação com Zod, tratamento global de erros e shutdown gracioso do servidor.
+O backend já possui autenticação com access token JWT e refresh token persistido em sessão, DTOs e mappers por domínio, validação com Zod, configuração central validada em startup, tratamento global de erros e shutdown gracioso do servidor.
 
 Importante: no estado atual, o backend ainda não implementa um motor de recomendação propriamente dito. O nome do projeto sugere esse objetivo, mas a implementação disponível hoje está focada em autenticação e consulta ao TMDB.
 
@@ -37,19 +37,21 @@ Importante: no estado atual, o backend ainda não implementa um motor de recomen
   - buscar filmes;
   - consultar detalhes;
   - consultar créditos.
-- Validação de entrada com Zod.
+- DTOs e mappers para `Auth`, `Users` e `Movies`.
+- Respostas normalizadas de filmes, em vez de repasse bruto do payload do TMDB.
+- Validação de entrada com Zod e reaproveitamento do payload parseado em `req.validated`.
+- Configuração central com fail-fast para `CLIENT_ORIGIN`, `JWT_SECRET`, `TMDB_BASE_URL` e `TMDB_API_KEY`.
 - Middleware global de erro com mapeamento de:
   - `AppError`;
   - `ZodError`;
   - erros Prisma;
   - erros genéricos.
+- Testes unitários com Vitest para validators, mappers, services, config e middlewares.
 - Graceful shutdown no processo do servidor.
 
 ### Ainda não implementado
 
-- Camada de DTOs para entrada e saída de dados.
 - Motor de recomendação de filmes.
-- Paginação padronizada nas respostas do TMDB.
 - Cache de respostas do TMDB.
 - Rate limiting.
 - Versionamento de API.
@@ -68,11 +70,13 @@ Importante: no estado atual, o backend ainda não implementa um motor de recomen
 - JWT
 - bcrypt
 - Axios
+- Vitest
 
 Scripts relevantes em `backend/package.json`:
 
 - `npm run dev`: desenvolvimento com `tsx watch`
 - `npm run build`: compila TypeScript
+- `npm run test`: executa a suíte Vitest
 - `npm run start`: executa o build em `dist/server.js`
 - `npm run prisma:migrate`: aplica migrations
 - `npm run prisma:generate`: gera o client Prisma
@@ -82,10 +86,13 @@ Scripts relevantes em `backend/package.json`:
 ## Estrutura principal
 
 - `src/app.ts` - configura Express, CORS, cookies, rotas e middleware global de erro.
-- `src/server.ts` - sobe o servidor HTTP, trata falhas do processo e faz shutdown gracioso.
+- `src/server.ts` - inicia o processo HTTP, trata falhas do processo e faz shutdown gracioso.
+- `src/bootstrap/start-server.ts` - sobe o servidor apenas após a configuração validada.
+- `src/config/app-config.ts` - centraliza e valida variáveis críticas da aplicação.
 - `src/routes/` - declara endpoints de auth, users, movies e health.
 - `src/controller/` - adapta request HTTP para chamadas de serviço e monta respostas.
 - `src/services/` - concentra regras de negócio e integrações externas.
+- `src/modules/` - define DTOs, tipos externos e mappers por domínio.
 - `src/repositories/` - abstrai acesso ao banco via Prisma.
 - `src/middlewares/` - autenticação, validação, verificação de origem e tratamento de erro.
 - `src/validators/` - schemas Zod para body, params e query.
@@ -113,10 +120,11 @@ Request
 Responsabilidades por camada:
 
 - `routes`: define endpoints e middlewares.
-- `middlewares`: valida, autentica e normaliza erros.
-- `controllers`: extraem dados do `req`, validam contexto HTTP e chamam services.
+- `middlewares`: valida, autentica, expõe payload parseado em `req.validated` e normaliza erros.
+- `controllers`: extraem dados HTTP e payload validado, validam contexto HTTP e chamam services.
 - `services`: concentram regras de negócio e orquestração.
 - `repositories`: fazem persistência com Prisma.
+- `modules`: estabilizam contratos de entrada e saída por domínio.
 - `utils`: dão suporte a autenticação, logs e tratamento de falhas.
 
 ---
@@ -127,7 +135,7 @@ Responsabilidades por camada:
 
 Responsável por montar a aplicação Express:
 
-- configura `cors` com `origin: process.env.CLIENT_ORIGIN`;
+- configura `cors` com `origin` vindo de `app-config`;
 - habilita `credentials: true`;
 - registra `express.json()`;
 - registra `cookie-parser`;
@@ -139,7 +147,8 @@ Responsável por montar a aplicação Express:
 Responsável pelo ciclo de vida do processo:
 
 - carrega variáveis com `dotenv/config`;
-- inicia o servidor na porta `process.env.PORT || 3000`;
+- valida configuração crítica antes de abrir a porta;
+- inicia o servidor pela camada `bootstrap/start-server`;
 - trata `server.on('error')`;
 - trata `uncaughtException`;
 - trata `unhandledRejection`;
@@ -170,7 +179,7 @@ Responsável pelo ciclo de vida do processo:
 
 - `POST /auth/refresh`
   - Lê o refresh token do cookie
-  - Rotaciona a sessão e devolve novo access token e novo refresh token
+  - Rotaciona a sessão e devolve novo access token
   - `401` se o refresh token não existir ou for inválido
 
 - `POST /auth/logout`
@@ -190,18 +199,18 @@ Responsável pelo ciclo de vida do processo:
 
 - `GET /movies/search?query=...`
   - Protegida por `authMiddleware`
-  - Valida o `query` com Zod
-  - Consulta o TMDB
+  - Valida `query` com Zod
+  - Consulta o TMDB e normaliza a resposta em DTOs de filme
 
 - `GET /movies/:id`
   - Protegida por `authMiddleware`
   - Valida `id` numérico
-  - Retorna detalhes do filme
+  - Retorna detalhes do filme em DTO normalizado
 
 - `GET /movies/:id/credits`
   - Protegida por `authMiddleware`
   - Valida `id` numérico
-  - Retorna créditos do filme
+  - Retorna créditos em DTO normalizado
 
 ### Health
 
@@ -254,7 +263,8 @@ Observações:
 
 - Gerado em `src/utils/jwt.ts`.
 - Carrega `userId`.
-- Usado pelo `authMiddleware` para proteger rotas.
+- Usa `JWT_SECRET` vindo da configuração central validada.
+- É usado pelo `authMiddleware` para proteger rotas.
 
 ### Refresh token
 
@@ -284,6 +294,7 @@ Observações:
   - `body`
   - `params`
   - `query`
+- O resultado parseado é salvo em `req.validated` em vez de sobrescrever `req.body`, `req.query` ou `req.params`.
 
 Schemas atuais:
 
@@ -342,7 +353,7 @@ O `TmdbService` encapsula as chamadas ao TMDB via Axios.
 
 Comportamento atual:
 
-- exige `TMDB_BASE_URL` e `TMDB_API_KEY`;
+- usa `TMDB_BASE_URL` e `TMDB_API_KEY` já validados pela configuração central;
 - adiciona `language: 'en-US'` às requisições;
 - converte erro `404` em `MOVIE_NOT_FOUND`;
 - converte outros erros de Axios em `TMDB_SERVICE_UNAVAILABLE`.
@@ -353,52 +364,16 @@ Endpoints consumidos internamente:
 - `/movie/:id`
 - `/movie/:id/credits`
 
-Observação importante:
+Observações importantes:
 
-- As respostas do TMDB ainda são repassadas em formato bruto para o frontend. Isso funciona, mas deixa a API mais acoplada ao contrato externo.
+- As respostas do TMDB são adaptadas por mappers e expostas em DTOs estáveis.
+- O backend falha no startup se configuração crítica como `TMDB_BASE_URL`, `TMDB_API_KEY`, `JWT_SECRET` ou `CLIENT_ORIGIN` estiver ausente ou inválida.
 
 ---
 
 ## Recomendações de melhoria
 
-### 1. Introduzir DTOs
-
-Essa é a melhoria mais relevante para o momento.
-
-Hoje os controllers e services trabalham diretamente com `req.body`, `req.query`, `req.params` e com objetos brutos retornados de Prisma e TMDB. Criar DTOs ajudaria a:
-
-- separar contrato HTTP da lógica interna;
-- padronizar payloads de entrada e saída;
-- reduzir acoplamento com Prisma e TMDB;
-- facilitar refatorações futuras;
-- deixar os testes mais previsíveis.
-
-Sugestão prática:
-
-- criar `dto/` ou `schemas/` por domínio;
-- usar DTOs de entrada para mapear request -> service;
-- usar DTOs de saída para responder ao frontend sem vazar campos sensíveis.
-
-Exemplos úteis:
-
-- `RegisterUserDto`
-- `LoginUserDto`
-- `UserProfileDto`
-- `MovieSummaryDto`
-- `MovieDetailsDto`
-- `MovieCreditsDto`
-
-### 2. Normalizar respostas de filmes
-
-Hoje o TMDB retorna payload completo. Vale criar uma camada de adaptação para devolver só o que o frontend realmente usa.
-
-Benefícios:
-
-- resposta menor;
-- contrato mais estável;
-- menos dependência do formato do provedor externo.
-
-### 3. Criar serviços dedicados por domínio
+### 1. Criar serviços dedicados por domínio
 
 Se o projeto começar a evoluir para recomendação real, vale separar melhor:
 
@@ -408,7 +383,7 @@ Se o projeto começar a evoluir para recomendação real, vale separar melhor:
 
 Isso evita que `TmdbService` vire uma classe muito genérica.
 
-### 4. Implementar um motor de recomendação
+### 2. Implementar um motor de recomendação
 
 O projeto ainda não tem recomendação como feature real. Possíveis caminhos:
 
@@ -418,7 +393,7 @@ O projeto ainda não tem recomendação como feature real. Possíveis caminhos:
 - armazenar preferências do usuário;
 - calcular ranking local ou em background.
 
-### 5. Adicionar paginação e filtros
+### 3. Adicionar paginação e filtros
 
 Principalmente para buscas e listas futuras:
 
@@ -427,20 +402,19 @@ Principalmente para buscas e listas futuras:
 - ordenação
 - filtro por gênero, idioma ou ano
 
-### 6. Cache para chamadas externas
+### 4. Cache para chamadas externas
 
 O TMDB pode ser cacheado por curto período para reduzir latência e dependência externa.
 
-### 7. Cobertura de testes
+### 5. Cobertura de testes
 
 Prioridades:
 
-- service tests;
-- controller tests;
-- integration tests para auth e movies;
-- testes do middleware de erro.
+- testes de integração para auth e movies;
+- testes de middlewares restantes;
+- testes de erro em cenários reais de borda.
 
-### 8. Versionamento de API
+### 6. Versionamento de API
 
 Se a API crescer, `v1` ajuda a evoluir sem quebrar o frontend.
 
@@ -454,7 +428,6 @@ Exemplo:
 
 ## Próximos passos naturais
 
-- consolidar DTOs e mappers;
 - definir o primeiro escopo real de recomendação;
-- padronizar as respostas da API de filmes;
+- introduzir cache e filtros adicionais para TMDB;
 - ampliar testes do backend.
