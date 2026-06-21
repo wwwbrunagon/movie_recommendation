@@ -2,17 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
+import { getAppConfig } from './config/app-config';
 import healthRoutes from './routes/health.routes';
 import { authRoutes } from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import movieRoutes from './routes/movie.routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 
+const { clientOrigin } = getAppConfig();
 const app = express();
 
 app.use(
 	cors({
-		origin: process.env.CLIENT_ORIGIN,
+		origin: clientOrigin,
 		credentials: true,
 	}),
 );

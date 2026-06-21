@@ -1,16 +1,14 @@
 import 'dotenv/config';
 import app from './app';
+import { startServer } from './bootstrap/start-server';
 import { AppError } from './utils/app-error';
 import { logError } from './utils/logger';
 
-const PORT = process.env.PORT || 3000;
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 
-const server = app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
-});
+const server = startServer(app);
 
 const normalizeError = (error: unknown): Error => {
 	if (error instanceof Error) {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAppConfig } from '../config/app-config';
 import type {
 	MovieCreditsDto,
 	MovieDetailsDto,
@@ -22,20 +23,12 @@ const tmdbApi = axios.create();
 
 class TmdbService {
 	private getRequestConfig() {
-		const baseURL = process.env.TMDB_BASE_URL;
-		const apiKey = process.env.TMDB_API_KEY;
-
-		if (!baseURL || !apiKey) {
-			throw AppError.internalServerError(
-				'TMDB configuration is missing',
-				'TMDB_CONFIGURATION_ERROR',
-			);
-		}
+		const { tmdb } = getAppConfig();
 
 		return {
-			baseURL,
+			baseURL: tmdb.baseUrl,
 			params: {
-				api_key: apiKey,
+				api_key: tmdb.apiKey,
 				language: 'en-US',
 			},
 		};

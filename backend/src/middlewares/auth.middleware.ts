@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
+import { getAppConfig } from '../config/app-config';
 import { AppError } from '../utils/app-error';
 
 interface JwtPayload {
@@ -28,18 +29,8 @@ export const authMiddleware = (
 		);
 	}
 
-	const jwtSecret = process.env.JWT_SECRET;
-
-	if (!jwtSecret) {
-		return next(
-			AppError.internalServerError(
-				'JWT_SECRET is not configured',
-				'JWT_SECRET_NOT_CONFIGURED',
-			),
-		);
-	}
-
 	try {
+		const { jwtSecret } = getAppConfig();
 		const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
 
 		req.user = {
@@ -47,7 +38,11 @@ export const authMiddleware = (
 		};
 
 		next();
-	} catch {
+	} catch (error) {
+		if (error instanceof AppError) {
+			return next(error);
+		}
+
 		return next(AppError.unauthorized('Invalid token', 'INVALID_TOKEN'));
 	}
 };
